@@ -3,6 +3,7 @@ package ionq
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
@@ -18,7 +19,8 @@ type Backend struct {
 	client *httpClient
 	device string       // "simulator", "qpu.aria-1", "qpu.forte-1", etc.
 	tgt    target.Target
-	jobs sync.Map // jobID → jobMeta
+	jobs   sync.Map // jobID → jobMeta
+	logger *slog.Logger
 }
 
 type jobMeta struct {
@@ -44,17 +46,24 @@ func WithHTTPClient(c *http.Client) Option {
 	return func(b *Backend) { b.client.base = c }
 }
 
+// WithLogger sets the structured logger for the IonQ backend.
+func WithLogger(l *slog.Logger) Option {
+	return func(b *Backend) { b.logger = l }
+}
+
 // New creates an IonQ backend with the given API key.
 func New(apiKey string, opts ...Option) *Backend {
 	b := &Backend{
 		client: newHTTPClient(apiKey, "", nil),
 		device: "simulator",
 		tgt:    target.Simulator,
+		logger: slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(b)
 	}
 	b.tgt = deviceTarget(b.device)
+	b.client.backend = b.Name()
 	return b
 }
 
@@ -84,12 +93,23 @@ func (b *Backend) Submit(ctx context.Context, req *backend.SubmitRequest) (*back
 		Input:    *input,
 	}
 
+	b.logger.InfoContext(ctx, "submitting to IonQ",
+		slog.String("device", b.device),
+		slog.Int("shots", req.Shots),
+		slog.Int("qubits", req.Circuit.NumQubits()),
+	)
+
 	var resp ionqJobResponse
 	if err := b.client.do(ctx, http.MethodPost, "/jobs", body, &resp); err != nil {
 		return nil, err
 	}
 
 	b.jobs.Store(resp.ID, jobMeta{qubits: req.Circuit.NumQubits(), shots: req.Shots})
+
+	b.logger.InfoContext(ctx, "job submitted to IonQ",
+		slog.String("job_id", resp.ID),
+		slog.String("status", resp.Status),
+	)
 
 	return &backend.Job{
 		ID:      resp.ID,

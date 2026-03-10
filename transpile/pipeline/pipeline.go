@@ -2,7 +2,11 @@
 package pipeline
 
 import (
+	"context"
+	"time"
+
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/observe"
 	"github.com/splch/qgo/transpile"
 	"github.com/splch/qgo/transpile/pass"
 	"github.com/splch/qgo/transpile/routing"
@@ -19,39 +23,51 @@ const (
 	LevelParallel Level = 3 // multi-strategy, pick best
 )
 
-// DefaultPipeline returns a transpilation pass for the given optimization level.
-func DefaultPipeline(level Level) transpile.Pass {
+type namedPass struct {
+	name string
+	fn   transpile.Pass
+}
+
+// passesForLevel returns the ordered named passes for a given optimization level.
+func passesForLevel(level Level) []namedPass {
 	switch level {
 	case LevelNone:
-		return transpile.Pipeline(
-			pass.RemoveBarriers,
-			pass.DecomposeToTarget,
-			pass.ValidateTarget,
-		)
+		return []namedPass{
+			{"remove_barriers", pass.RemoveBarriers},
+			{"decompose_to_target", pass.DecomposeToTarget},
+			{"validate_target", pass.ValidateTarget},
+		}
 	case LevelBasic:
-		return transpile.Pipeline(
-			pass.RemoveBarriers,
-			routeIfNeeded,
-			pass.DecomposeToTarget,
-			pass.CancelAdjacent,
-			pass.MergeRotations,
-			pass.CancelAdjacent,
-			pass.ValidateTarget,
-		)
+		return []namedPass{
+			{"remove_barriers", pass.RemoveBarriers},
+			{"route", routeIfNeeded},
+			{"decompose_to_target", pass.DecomposeToTarget},
+			{"cancel_adjacent", pass.CancelAdjacent},
+			{"merge_rotations", pass.MergeRotations},
+			{"cancel_adjacent", pass.CancelAdjacent},
+			{"validate_target", pass.ValidateTarget},
+		}
 	case LevelFull:
-		return transpile.Pipeline(
-			pass.RemoveBarriers,
-			routeIfNeeded,
-			pass.DecomposeToTarget,
-			pass.CancelAdjacent,
-			pass.MergeRotations,
-			pass.CommuteThroughCNOT,
-			pass.CancelAdjacent,
-			pass.MergeRotations,
-			pass.ParallelizeOps,
-			pass.ValidateTarget,
-		)
-	case LevelParallel:
+		return []namedPass{
+			{"remove_barriers", pass.RemoveBarriers},
+			{"route", routeIfNeeded},
+			{"decompose_to_target", pass.DecomposeToTarget},
+			{"cancel_adjacent", pass.CancelAdjacent},
+			{"merge_rotations", pass.MergeRotations},
+			{"commute", pass.CommuteThroughCNOT},
+			{"cancel_adjacent", pass.CancelAdjacent},
+			{"merge_rotations", pass.MergeRotations},
+			{"parallelize", pass.ParallelizeOps},
+			{"validate_target", pass.ValidateTarget},
+		}
+	default:
+		return passesForLevel(LevelBasic)
+	}
+}
+
+// DefaultPipeline returns a transpilation pass for the given optimization level.
+func DefaultPipeline(level Level) transpile.Pass {
+	if level == LevelParallel {
 		return func(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 			strategies := []transpile.Pass{
 				DefaultPipeline(LevelBasic),
@@ -59,9 +75,96 @@ func DefaultPipeline(level Level) transpile.Pass {
 			}
 			return OptimizeParallel(c, t, strategies, DefaultCost)
 		}
-	default:
-		return DefaultPipeline(LevelBasic)
 	}
+	np := passesForLevel(level)
+	fns := make([]transpile.Pass, len(np))
+	for i, p := range np {
+		fns[i] = p.fn
+	}
+	return transpile.Pipeline(fns...)
+}
+
+// Run executes a transpilation pipeline with observability hooks from the context.
+// It fires WrapTranspile around the full pipeline and WrapPass around each pass.
+func Run(ctx context.Context, c *ir.Circuit, t target.Target, level Level) (*ir.Circuit, error) {
+	hooks := observe.FromContext(ctx)
+	inInfo := circuitInfo(c)
+
+	if level == LevelParallel {
+		return runParallel(ctx, c, t, hooks, inInfo)
+	}
+
+	var transpileDone func(observe.CircuitInfo, error)
+	if hooks != nil && hooks.WrapTranspile != nil {
+		ctx, transpileDone = hooks.WrapTranspile(ctx, int(level), inInfo)
+	}
+
+	result, err := runPasses(ctx, c, t, passesForLevel(level), hooks)
+
+	if transpileDone != nil {
+		out := observe.CircuitInfo{}
+		if err == nil && result != nil {
+			out = circuitInfo(result)
+		}
+		transpileDone(out, err)
+	}
+	return result, err
+}
+
+func runPasses(ctx context.Context, c *ir.Circuit, t target.Target, passes []namedPass, hooks *observe.Hooks) (*ir.Circuit, error) {
+	result := c
+	for _, np := range passes {
+		passIn := circuitInfo(result)
+
+		var passDone func(observe.CircuitInfo, error)
+		if hooks != nil && hooks.WrapPass != nil {
+			ctx, passDone = hooks.WrapPass(ctx, np.name, passIn)
+		}
+
+		start := time.Now()
+		out, err := np.fn(result, t)
+		_ = time.Since(start)
+
+		if passDone != nil {
+			passOut := observe.CircuitInfo{}
+			if err == nil && out != nil {
+				passOut = circuitInfo(out)
+			}
+			passDone(passOut, err)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		result = out
+	}
+	return result, nil
+}
+
+func runParallel(ctx context.Context, c *ir.Circuit, t target.Target, hooks *observe.Hooks, inInfo observe.CircuitInfo) (*ir.Circuit, error) {
+	var transpileDone func(observe.CircuitInfo, error)
+	if hooks != nil && hooks.WrapTranspile != nil {
+		ctx, transpileDone = hooks.WrapTranspile(ctx, int(LevelParallel), inInfo)
+	}
+
+	strategies := []transpile.Pass{
+		func(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
+			return Run(ctx, c, t, LevelBasic)
+		},
+		func(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
+			return Run(ctx, c, t, LevelFull)
+		},
+	}
+	result, err := OptimizeParallel(c, t, strategies, DefaultCost)
+
+	if transpileDone != nil {
+		out := observe.CircuitInfo{}
+		if err == nil && result != nil {
+			out = circuitInfo(result)
+		}
+		transpileDone(out, err)
+	}
+	return result, err
 }
 
 // DefaultCost scores a circuit: lower is better.
@@ -121,4 +224,16 @@ func routeIfNeeded(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 		return c, nil
 	}
 	return routing.Route(c, t)
+}
+
+func circuitInfo(c *ir.Circuit) observe.CircuitInfo {
+	s := c.Stats()
+	return observe.CircuitInfo{
+		Name:          c.Name(),
+		NumQubits:     c.NumQubits(),
+		GateCount:     s.GateCount,
+		TwoQubitGates: s.TwoQubitGates,
+		Depth:         s.Depth,
+		Params:        s.Params,
+	}
 }

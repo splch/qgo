@@ -924,7 +924,7 @@ qgo transpile bench --target ionq.forte --baseline previous-report.json
 | 27 | Fuzz testing for parser, builder, serialization. Edge case hardening. |
 | 28 | API documentation (Go doc). README, examples, quickstart guide. |
 
-**Milestone:** Public beta release: `go install github.com/qgo-sdk/qgo/cmd/qgo@latest` works out of the box with IonQ, IBM, and Braket.
+**Milestone:** Public beta release: `go install github.com/splch/qgo/cmd/qgo@latest` works out of the box with IonQ, IBM, and Braket.
 
 ---
 
@@ -964,7 +964,7 @@ func Get(name string, cfg map[string]string) (Backend, error) {
 // In a separate module: github.com/example/qgo-myqpu
 package myqpu
 
-import "github.com/qgo-sdk/qgo/backend"
+import "github.com/splch/qgo/backend"
 
 func init() {
     backend.Register("myqpu", func(cfg map[string]string) (backend.Backend, error) {

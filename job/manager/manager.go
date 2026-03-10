@@ -4,10 +4,12 @@ package manager
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/splch/qgo/backend"
+	"github.com/splch/qgo/observe"
 )
 
 // Manager handles concurrent job submission, polling, and result retrieval.
@@ -17,6 +19,7 @@ type Manager struct {
 	pollFreq time.Duration
 	maxConc  int
 	sem      chan struct{} // concurrency limiter
+	logger   *slog.Logger
 }
 
 // Option configures a Manager.
@@ -32,12 +35,18 @@ func WithMaxConcurrent(n int) Option {
 	return func(m *Manager) { m.maxConc = n }
 }
 
+// WithLogger sets the structured logger for the manager.
+func WithLogger(l *slog.Logger) Option {
+	return func(m *Manager) { m.logger = l }
+}
+
 // New creates a job manager.
 func New(opts ...Option) *Manager {
 	m := &Manager{
 		backends: make(map[string]backend.Backend),
 		pollFreq: 2 * time.Second,
 		maxConc:  10,
+		logger:   slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -78,16 +87,52 @@ func (m *Manager) Submit(ctx context.Context, name string, req *backend.SubmitRe
 		return nil, err
 	}
 
+	hooks := observe.FromContext(ctx)
+	var jobDone func(string, error)
+	if hooks != nil && hooks.WrapJob != nil {
+		info := observe.JobInfo{Backend: name, Shots: req.Shots}
+		if req.Circuit != nil {
+			info.Qubits = req.Circuit.NumQubits()
+		}
+		ctx, jobDone = hooks.WrapJob(ctx, info)
+	}
+
+	m.logger.InfoContext(ctx, "submitting job",
+		slog.String("backend", name),
+		slog.Int("shots", req.Shots),
+	)
+
 	job, err := b.Submit(ctx, req)
 	if err != nil {
+		if jobDone != nil {
+			jobDone("", err)
+		}
 		return nil, fmt.Errorf("manager: submit to %s: %w", name, err)
 	}
 
-	if err := m.pollUntilDone(ctx, b, job.ID); err != nil {
+	m.logger.InfoContext(ctx, "job submitted",
+		slog.String("backend", name),
+		slog.String("job_id", job.ID),
+	)
+
+	if err := m.pollUntilDone(ctx, b, job.ID, name); err != nil {
+		if jobDone != nil {
+			jobDone(job.ID, err)
+		}
 		return nil, err
 	}
 
-	return b.Result(ctx, job.ID)
+	result, err := b.Result(ctx, job.ID)
+	if jobDone != nil {
+		jobDone(job.ID, err)
+	}
+	if err == nil {
+		m.logger.InfoContext(ctx, "job completed",
+			slog.String("backend", name),
+			slog.String("job_id", job.ID),
+		)
+	}
+	return result, err
 }
 
 // SubmitAsync sends a job and returns a channel that delivers the result.
@@ -151,13 +196,26 @@ func (m *Manager) Watch(ctx context.Context, name string, jobID string) <-chan *
 			return
 		}
 
+		hooks := observe.FromContext(ctx)
 		ticker := time.NewTicker(m.pollFreq)
 		defer ticker.Stop()
 
+		attempt := 0
 		for {
+			attempt++
 			status, err := b.Status(ctx, jobID)
 			if err != nil {
 				return
+			}
+
+			if hooks != nil && hooks.OnJobPoll != nil {
+				hooks.OnJobPoll(ctx, observe.JobPollInfo{
+					Backend:  name,
+					JobID:    jobID,
+					State:    status.State.String(),
+					Attempt:  attempt,
+					QueuePos: status.QueuePos,
+				})
 			}
 
 			select {
@@ -180,15 +238,37 @@ func (m *Manager) Watch(ctx context.Context, name string, jobID string) <-chan *
 	return ch
 }
 
-func (m *Manager) pollUntilDone(ctx context.Context, b backend.Backend, jobID string) error {
+func (m *Manager) pollUntilDone(ctx context.Context, b backend.Backend, jobID, backendName string) error {
 	ticker := time.NewTicker(m.pollFreq)
 	defer ticker.Stop()
 
+	hooks := observe.FromContext(ctx)
+	attempt := 0
+
 	for {
+		attempt++
 		status, err := b.Status(ctx, jobID)
 		if err != nil {
 			return fmt.Errorf("manager: poll %s: %w", jobID, err)
 		}
+
+		if hooks != nil && hooks.OnJobPoll != nil {
+			hooks.OnJobPoll(ctx, observe.JobPollInfo{
+				Backend:  backendName,
+				JobID:    jobID,
+				State:    status.State.String(),
+				Attempt:  attempt,
+				QueuePos: status.QueuePos,
+			})
+		}
+
+		m.logger.DebugContext(ctx, "polling job",
+			slog.String("backend", backendName),
+			slog.String("job_id", jobID),
+			slog.String("state", status.State.String()),
+			slog.Int("attempt", attempt),
+		)
+
 		switch status.State {
 		case backend.StateCompleted:
 			return nil

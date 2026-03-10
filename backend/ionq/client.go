@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/splch/qgo/observe"
 )
 
 const (
@@ -20,6 +22,7 @@ type httpClient struct {
 	base    *http.Client
 	baseURL string
 	apiKey  string
+	backend string // backend name for observability (e.g., "ionq.simulator")
 }
 
 func newHTTPClient(apiKey, baseURL string, base *http.Client) *httpClient {
@@ -36,7 +39,7 @@ func newHTTPClient(apiKey, baseURL string, base *http.Client) *httpClient {
 func (c *httpClient) do(ctx context.Context, method, path string, body, resp any) error {
 	var attempt int
 	for {
-		err := c.doOnce(ctx, method, path, body, resp)
+		err := c.doOnce(ctx, method, path, body, resp, attempt)
 		if err == nil {
 			return nil
 		}
@@ -54,11 +57,24 @@ func (c *httpClient) do(ctx context.Context, method, path string, body, resp any
 	}
 }
 
-func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp any) error {
+func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp any, attempt int) error {
+	hooks := observe.FromContext(ctx)
+	var httpDone func(int, error)
+	if hooks != nil && hooks.WrapHTTP != nil {
+		ctx, httpDone = hooks.WrapHTTP(ctx, observe.HTTPInfo{
+			Method:  method,
+			Path:    path,
+			Backend: c.backend,
+		})
+	}
+
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
 		if err != nil {
+			if httpDone != nil {
+				httpDone(0, err)
+			}
 			return fmt.Errorf("ionq: marshal request: %w", err)
 		}
 		bodyReader = bytes.NewReader(data)
@@ -66,6 +82,9 @@ func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
 	if err != nil {
+		if httpDone != nil {
+			httpDone(0, err)
+		}
 		return fmt.Errorf("ionq: create request: %w", err)
 	}
 	req.Header.Set("Authorization", "apiKey "+c.apiKey)
@@ -76,12 +95,18 @@ func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp
 
 	httpResp, err := c.base.Do(req)
 	if err != nil {
+		if httpDone != nil {
+			httpDone(0, err)
+		}
 		return fmt.Errorf("ionq: http request: %w", err)
 	}
 	defer httpResp.Body.Close()
 
 	respBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {
+		if httpDone != nil {
+			httpDone(httpResp.StatusCode, err)
+		}
 		return fmt.Errorf("ionq: read response: %w", err)
 	}
 
@@ -97,13 +122,23 @@ func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp
 		} else {
 			apiErr.Message = string(respBody)
 		}
+		if httpDone != nil {
+			httpDone(httpResp.StatusCode, apiErr)
+		}
 		return apiErr
 	}
 
 	if resp != nil && len(respBody) > 0 {
 		if err := json.Unmarshal(respBody, resp); err != nil {
+			if httpDone != nil {
+				httpDone(httpResp.StatusCode, err)
+			}
 			return fmt.Errorf("ionq: unmarshal response: %w", err)
 		}
+	}
+
+	if httpDone != nil {
+		httpDone(httpResp.StatusCode, nil)
 	}
 	return nil
 }

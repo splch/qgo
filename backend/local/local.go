@@ -6,9 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/splch/qgo/backend"
+	"github.com/splch/qgo/observe"
 	"github.com/splch/qgo/sim/statevector"
 	"github.com/splch/qgo/transpile/target"
 )
@@ -19,6 +22,7 @@ var _ backend.Backend = (*Backend)(nil)
 type Backend struct {
 	maxQubits int
 	results   sync.Map // jobID → *backend.Result
+	logger    *slog.Logger
 }
 
 // Option configures a local Backend.
@@ -29,9 +33,14 @@ func WithMaxQubits(n int) Option {
 	return func(b *Backend) { b.maxQubits = n }
 }
 
+// WithLogger sets the structured logger for the local backend.
+func WithLogger(l *slog.Logger) Option {
+	return func(b *Backend) { b.logger = l }
+}
+
 // New creates a local simulator backend.
 func New(opts ...Option) *Backend {
-	b := &Backend{maxQubits: 28}
+	b := &Backend{maxQubits: 28, logger: slog.Default()}
 	for _, opt := range opts {
 		opt(b)
 	}
@@ -59,11 +68,41 @@ func (b *Backend) Submit(ctx context.Context, req *backend.SubmitRequest) (*back
 	default:
 	}
 
-	sim := statevector.New(req.Circuit.NumQubits())
+	nq := req.Circuit.NumQubits()
+	gc := req.Circuit.Stats().GateCount
+
+	hooks := observe.FromContext(ctx)
+	var simDone func(error)
+	if hooks != nil && hooks.WrapSim != nil {
+		ctx, simDone = hooks.WrapSim(ctx, observe.SimInfo{
+			NumQubits: nq,
+			GateCount: gc,
+			Shots:     req.Shots,
+		})
+	}
+
+	b.logger.InfoContext(ctx, "simulating circuit",
+		slog.Int("qubits", nq),
+		slog.Int("gates", gc),
+		slog.Int("shots", req.Shots),
+	)
+
+	start := time.Now()
+	sim := statevector.New(nq)
 	counts, err := sim.Run(req.Circuit, req.Shots)
+	elapsed := time.Since(start)
+
+	if simDone != nil {
+		simDone(err)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("local: %w", err)
 	}
+
+	b.logger.InfoContext(ctx, "simulation complete",
+		slog.Int("qubits", nq),
+		slog.Duration("elapsed", elapsed),
+	)
 
 	id := generateID()
 	b.results.Store(id, &backend.Result{
