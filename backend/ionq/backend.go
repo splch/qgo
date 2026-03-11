@@ -18,7 +18,7 @@ var _ backend.Backend = (*Backend)(nil)
 // Backend submits and retrieves quantum jobs via the IonQ REST API.
 type Backend struct {
 	client *httpClient
-	device string       // "simulator", "qpu.aria-1", "qpu.forte-1", etc.
+	device string // "simulator", "qpu.aria-1", "qpu.forte-1", etc.
 	tgt    target.Target
 	jobs   sync.Map // jobID → jobMeta; entries are never evicted — recreate Backend for long-lived use
 	logger *slog.Logger
@@ -68,7 +68,7 @@ func New(apiKey string, opts ...Option) *Backend {
 	return b
 }
 
-func (b *Backend) Name() string         { return "ionq." + b.device }
+func (b *Backend) Name() string          { return "ionq." + b.device }
 func (b *Backend) Target() target.Target { return b.tgt }
 
 // Submit sends a circuit to IonQ for execution.

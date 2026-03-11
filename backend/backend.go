@@ -87,8 +87,8 @@ func (s JobState) Terminal() bool {
 type JobStatus struct {
 	ID        string
 	State     JobState
-	Progress  float64   // 0.0–1.0, or -1 if unknown
-	QueuePos  int       // position in queue, or -1 if unknown
+	Progress  float64 // 0.0–1.0, or -1 if unknown
+	QueuePos  int     // position in queue, or -1 if unknown
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Error     string // populated when State == StateFailed

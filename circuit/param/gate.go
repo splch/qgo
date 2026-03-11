@@ -12,7 +12,7 @@ var _ gate.Bindable = (*symbolicGate)(nil)
 
 // symbolicGate wraps a gate constructor with symbolic expressions.
 type symbolicGate struct {
-	baseName    string   // e.g., "RX", "RZ", "U3"
+	baseName    string // e.g., "RX", "RZ", "U3"
 	nQubits     int
 	exprs       []Expr
 	constructor func(params []float64) gate.Gate

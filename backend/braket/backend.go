@@ -101,7 +101,7 @@ func New(cfg aws.Config, opts ...Option) *Backend {
 	return b
 }
 
-func (b *Backend) Name() string         { return "braket." + b.device }
+func (b *Backend) Name() string          { return "braket." + b.device }
 func (b *Backend) Target() target.Target { return b.tgt }
 
 // Submit sends a circuit to Amazon Braket for execution.

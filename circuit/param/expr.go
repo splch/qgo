@@ -47,8 +47,8 @@ func Neg(a Expr) Expr { return &negExpr{inner: a} }
 type literal struct{ v float64 }
 
 func (l *literal) Eval(_ map[string]float64) (float64, error) { return l.v, nil }
-func (l *literal) Parameters() []*Parameter                    { return nil }
-func (l *literal) IsNumeric() bool                             { return true }
+func (l *literal) Parameters() []*Parameter                   { return nil }
+func (l *literal) IsNumeric() bool                            { return true }
 
 func (l *literal) String() string {
 	return piformat.FormatUnicode(l.v)
@@ -152,4 +152,3 @@ func mergeParams(a, b []*Parameter) []*Parameter {
 	}
 	return result
 }
-

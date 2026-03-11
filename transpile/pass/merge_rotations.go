@@ -129,4 +129,3 @@ func rotationAxis(g gate.Gate) string {
 	}
 	return ""
 }
-

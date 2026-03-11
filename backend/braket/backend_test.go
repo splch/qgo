@@ -331,9 +331,9 @@ func TestResultFromS3(t *testing.T) {
 	mb := &mockBraket{
 		getFunc: func(ctx context.Context, input *braketservice.GetQuantumTaskInput, optFns ...func(*braketservice.Options)) (*braketservice.GetQuantumTaskOutput, error) {
 			return &braketservice.GetQuantumTaskOutput{
-				QuantumTaskArn:  input.QuantumTaskArn,
-				Status:          brakettypes.QuantumTaskStatusCompleted,
-				OutputS3Bucket:  aws.String("results-bucket"),
+				QuantumTaskArn:    input.QuantumTaskArn,
+				Status:            brakettypes.QuantumTaskStatusCompleted,
+				OutputS3Bucket:    aws.String("results-bucket"),
 				OutputS3Directory: aws.String("qgo/task-123"),
 			}, nil
 		},

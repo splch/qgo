@@ -29,10 +29,10 @@ func Depolarizing1Q(p float64) Channel {
 		name: fmt.Sprintf("depolarizing1q(%.4f)", p),
 		nq:   1,
 		kraus: [][]complex128{
-			{s0, 0, 0, s0},             // sqrt(1-p) * I
-			{0, sp, sp, 0},             // sqrt(p/3) * X
-			{0, -sp * 1i, sp * 1i, 0},  // sqrt(p/3) * Y
-			{sp, 0, 0, -sp},            // sqrt(p/3) * Z
+			{s0, 0, 0, s0},            // sqrt(1-p) * I
+			{0, sp, sp, 0},            // sqrt(p/3) * X
+			{0, -sp * 1i, sp * 1i, 0}, // sqrt(p/3) * Y
+			{sp, 0, 0, -sp},           // sqrt(p/3) * Z
 		},
 	}
 }

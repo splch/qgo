@@ -164,9 +164,9 @@ func TestDecomposeToTargetRemovesBarriers(t *testing.T) {
 // barrierGate mimics the builder's barrier gate for testing.
 type barrierGate int
 
-func (g barrierGate) Name() string            { return "barrier" }
-func (g barrierGate) Qubits() int             { return int(g) }
-func (g barrierGate) Matrix() []complex128     { return nil }
-func (g barrierGate) Params() []float64       { return nil }
-func (g barrierGate) Inverse() gate.Gate      { return g }
+func (g barrierGate) Name() string                     { return "barrier" }
+func (g barrierGate) Qubits() int                      { return int(g) }
+func (g barrierGate) Matrix() []complex128             { return nil }
+func (g barrierGate) Params() []float64                { return nil }
+func (g barrierGate) Inverse() gate.Gate               { return g }
 func (g barrierGate) Decompose(_ []int) []gate.Applied { return nil }

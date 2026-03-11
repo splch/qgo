@@ -385,9 +385,9 @@ func TestEulerZSX_ParameterizedGates(t *testing.T) {
 
 func TestEulerZSX_SpecialCases(t *testing.T) {
 	cases := []struct {
-		name     string
-		m        []complex128
-		maxOps   int
+		name   string
+		m      []complex128
+		maxOps int
 	}{
 		{"Identity", gate.I.Matrix(), 0},
 		{"RZ(pi/4)", gate.RZ(math.Pi / 4).Matrix(), 1},

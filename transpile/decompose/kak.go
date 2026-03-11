@@ -89,7 +89,7 @@ func tryLocalDecompose(m []complex128, q0, q1 int) []ir.Operation {
 	a, b := factorKronecker(m)
 	prod := Tensor(a, 2, b, 2)
 	if isGlobalPhaseOf(prod, m, 1e-9) {
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, 6)
 		ops = append(ops, eulerFromMatrix(a, q0)...)
 		ops = append(ops, eulerFromMatrix(b, q1)...)
 		if len(ops) == 0 {
@@ -101,7 +101,9 @@ func tryLocalDecompose(m []complex128, q0, q1 int) []ir.Operation {
 }
 
 // KakParams extracts the KAK decomposition parameters from a 4×4 unitary:
-//   U = (K1l⊗K1r) · exp(i(x·XX + y·YY + z·ZZ)) · (K2l⊗K2r)
+//
+//	U = (K1l⊗K1r) · exp(i(x·XX + y·YY + z·ZZ)) · (K2l⊗K2r)
+//
 // Returns the four 2×2 K-matrices, the Weyl parameters (x,y,z), and the
 // count of nonzero Weyl parameters.
 func KakParams(m []complex128) (k1l, k1r, k2l, k2r []complex128, x, y, z float64, nNonzero int) {
@@ -244,7 +246,7 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 
 	if nNonzero == 0 {
 		// Local unitary (shouldn't normally reach here).
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, 6)
 		k := matMul2(k1l, k2l)
 		ops = append(ops, eulerFromMatrix(k, q0)...)
 		k = matMul2(k1r, k2r)
@@ -285,13 +287,13 @@ func isCNOTEquiv(x, y, z float64) bool {
 // Combines analytical K-matrices from Vatan-Williams (quant-ph/0308006)
 // with CNOT's own KAK K-matrices, computed once in init().
 var (
-	_u0l, _u0r                                 []complex128
-	_u1l                                       []complex128
-	_u1ra, _u1rb                               []complex128
-	_u2la, _u2lb                               []complex128
-	_u2ra, _u2rb                               []complex128
-	_u3l, _u3r                                 []complex128
-	_bK1lAdj, _bK1rAdj, _bK2lAdj, _bK2rAdj   []complex128
+	_u0l, _u0r                             []complex128
+	_u1l                                   []complex128
+	_u1ra, _u1rb                           []complex128
+	_u2la, _u2lb                           []complex128
+	_u2ra, _u2rb                           []complex128
+	_u3l, _u3r                             []complex128
+	_bK1lAdj, _bK1rAdj, _bK2lAdj, _bK2rAdj []complex128
 )
 
 func init() {
@@ -380,7 +382,7 @@ func threeCNOTCircuit(a, b, c float64, k1l, k1r, k2l, k2r []complex128, q0, q1 i
 	U3l := matMul2(_u3l, k2l)
 	U3r := matMul2(_u3r, k2r)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 27)
 	ops = append(ops, eulerFromMatrix(U3l, q0)...)
 	ops = append(ops, eulerFromMatrix(U3r, q1)...)
 	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
@@ -406,7 +408,7 @@ func oneCNOTCircuit(k1l, k1r, k2l, k2r []complex128, q0, q1 int) []ir.Operation 
 	Bl := matMul2(_bK2lAdj, k2l)
 	Br := matMul2(_bK2rAdj, k2r)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 13)
 	ops = append(ops, eulerFromMatrix(Bl, q0)...)
 	ops = append(ops, eulerFromMatrix(Br, q1)...)
 	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
@@ -423,11 +425,12 @@ func twoCNOTCircuit(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int
 	zz := math.Abs(z) > tol
 
 	var udOps []ir.Operation
-	if zz {
+	switch {
+	case zz:
 		udOps = zzCircuit(z, q0, q1)
-	} else if xz {
+	case xz:
 		udOps = xxCircuit(x, q0, q1)
-	} else if yz {
+	case yz:
 		udOps = yyCircuit(y, q0, q1)
 	}
 
@@ -439,7 +442,7 @@ func twoCNOTCircuit(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int
 	afterMat := MatMul(k1Full, correction, 4)
 	al, ar := factorKronecker(afterMat)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 4*3+len(udOps))
 	ops = append(ops, eulerFromMatrix(k2l, q0)...)
 	ops = append(ops, eulerFromMatrix(k2r, q1)...)
 	ops = append(ops, udOps...)
@@ -857,7 +860,7 @@ func tryLocalDecomposeForBasis(m []complex128, q0, q1 int, basis EulerBasis) []i
 	a, b := factorKronecker(m)
 	prod := Tensor(a, 2, b, 2)
 	if isGlobalPhaseOf(prod, m, 1e-9) {
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, 6)
 		ops = append(ops, eulerFromMatrixForBasis(a, q0, basis)...)
 		ops = append(ops, eulerFromMatrixForBasis(b, q1, basis)...)
 		if len(ops) == 0 {
@@ -873,7 +876,7 @@ func kakGeneralForBasis(m []complex128, q0, q1 int, basis EulerBasis) []ir.Opera
 	k1l, k1r, k2l, k2r, x, y, z, nNonzero := KakParams(m)
 
 	if nNonzero == 0 {
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, 6)
 		k := matMul2(k1l, k2l)
 		ops = append(ops, eulerFromMatrixForBasis(k, q0, basis)...)
 		k = matMul2(k1r, k2r)
@@ -895,7 +898,7 @@ func oneCNOTCircuitForBasis(k1l, k1r, k2l, k2r []complex128, q0, q1 int, basis E
 	Bl := matMul2(_bK2lAdj, k2l)
 	Br := matMul2(_bK2rAdj, k2r)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 13)
 	ops = append(ops, eulerFromMatrixForBasis(Bl, q0, basis)...)
 	ops = append(ops, eulerFromMatrixForBasis(Br, q1, basis)...)
 	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
@@ -911,11 +914,12 @@ func twoCNOTCircuitForBasis(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0
 	zz := math.Abs(z) > tol
 
 	var udOps []ir.Operation
-	if zz {
+	switch {
+	case zz:
 		udOps = zzCircuit(z, q0, q1)
-	} else if xz {
+	case xz:
 		udOps = xxCircuit(x, q0, q1)
-	} else if yz {
+	case yz:
 		udOps = yyCircuit(y, q0, q1)
 	}
 
@@ -926,7 +930,7 @@ func twoCNOTCircuitForBasis(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0
 	afterMat := MatMul(k1Full, correction, 4)
 	al, ar := factorKronecker(afterMat)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 4*3+len(udOps))
 	ops = append(ops, eulerFromMatrixForBasis(k2l, q0, basis)...)
 	ops = append(ops, eulerFromMatrixForBasis(k2r, q1, basis)...)
 	ops = append(ops, udOps...)
@@ -945,7 +949,7 @@ func threeCNOTCircuitForBasis(a, b, c float64, k1l, k1r, k2l, k2r []complex128, 
 	U3l := matMul2(_u3l, k2l)
 	U3r := matMul2(_u3r, k2r)
 
-	var ops []ir.Operation
+	ops := make([]ir.Operation, 0, 27)
 	ops = append(ops, eulerFromMatrixForBasis(U3l, q0, basis)...)
 	ops = append(ops, eulerFromMatrixForBasis(U3r, q1, basis)...)
 	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})

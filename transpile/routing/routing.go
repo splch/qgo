@@ -12,14 +12,14 @@ import (
 
 // Options configures the SABRE routing algorithm.
 type Options struct {
-	Trials              int     // number of random initial layouts to try (default 20)
-	BidirectionalIters  int     // forward+backward iterations per trial (default 4)
-	Seed                *uint64 // random seed; nil = non-deterministic
-	Parallelism         int     // max concurrent trials (default GOMAXPROCS)
-	DecayDelta          float64 // decay increment per SWAP (default 0.001)
-	ExtendedSetDepth    int     // BFS layers for lookahead (default 3)
-	ExtendedSetWeight   float64 // geometric weight for extended set layers (default 0.5)
-	ReleaseValveThreshold int   // SWAPs before release valve fires (default 10*numQubits, -1 disables)
+	Trials                int     // number of random initial layouts to try (default 20)
+	BidirectionalIters    int     // forward+backward iterations per trial (default 4)
+	Seed                  *uint64 // random seed; nil = non-deterministic
+	Parallelism           int     // max concurrent trials (default GOMAXPROCS)
+	DecayDelta            float64 // decay increment per SWAP (default 0.001)
+	ExtendedSetDepth      int     // BFS layers for lookahead (default 3)
+	ExtendedSetWeight     float64 // geometric weight for extended set layers (default 0.5)
+	ReleaseValveThreshold int     // SWAPs before release valve fires (default 10*numQubits, -1 disables)
 }
 
 func (o Options) withDefaults(numQubits int) Options {

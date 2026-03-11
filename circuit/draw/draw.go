@@ -137,11 +137,11 @@ func Fprint(w io.Writer, c *ir.Circuit, opts ...Option) error {
 			cw := colWidths[col]
 			cell := grid[q][col]
 
-			switch {
-			case cell == "+":
+			switch cell {
+			case "+":
 				// Vertical connector crosses this wire.
 				buf.WriteString(dashPad("+", cw))
-			case cell == "":
+			case "":
 				// Empty wire.
 				buf.WriteString(strings.Repeat("-", cw+2))
 			default:
@@ -381,4 +381,3 @@ func padRight(s string, width int) string {
 	}
 	return s + strings.Repeat(" ", width-len(s))
 }
-

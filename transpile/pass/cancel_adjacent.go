@@ -162,4 +162,3 @@ func sameQubits(a, b []int) bool {
 	}
 	return true
 }
-

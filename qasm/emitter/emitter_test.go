@@ -38,7 +38,7 @@ func TestEmitBell(t *testing.T) {
 		"cx q[0], q[1];",
 	}
 	for _, e := range expects {
-		if !strings.Contains(s,e) {
+		if !strings.Contains(s, e) {
 			t.Errorf("output missing %q\nFull output:\n%s", e, s)
 		}
 	}
@@ -59,10 +59,10 @@ func TestEmitParameterized(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(s,"rz(") {
+	if !strings.Contains(s, "rz(") {
 		t.Errorf("output missing rz gate\nFull output:\n%s", s)
 	}
-	if !strings.Contains(s,"p(") {
+	if !strings.Contains(s, "p(") {
 		t.Errorf("output missing phase gate\nFull output:\n%s", s)
 	}
 }
@@ -89,7 +89,7 @@ c[1] = measure q[1];
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(s,"if (c == 1) x") {
+	if !strings.Contains(s, "if (c == 1) x") {
 		t.Errorf("output missing conditional\nFull output:\n%s", s)
 	}
 }
@@ -173,4 +173,3 @@ func TestRoundTripParameterized(t *testing.T) {
 		t.Errorf("Ops count mismatch: %d vs %d", len(c.Ops()), len(c2.Ops()))
 	}
 }
-

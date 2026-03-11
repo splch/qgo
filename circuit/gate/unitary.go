@@ -8,14 +8,14 @@ import (
 // unitary is a gate defined by a user-provided unitary matrix.
 type unitary struct {
 	name   string
-	n      int             // 1, 2, or 3 qubits
-	matrix []complex128    // defensive copy
+	n      int          // 1, 2, or 3 qubits
+	matrix []complex128 // defensive copy
 }
 
-func (g *unitary) Name() string         { return g.name }
-func (g *unitary) Qubits() int          { return g.n }
-func (g *unitary) Matrix() []complex128  { return g.matrix }
-func (g *unitary) Params() []float64    { return nil }
+func (g *unitary) Name() string                { return g.name }
+func (g *unitary) Qubits() int                 { return g.n }
+func (g *unitary) Matrix() []complex128        { return g.matrix }
+func (g *unitary) Params() []float64           { return nil }
 func (g *unitary) Decompose(_ []int) []Applied { return nil }
 
 func (g *unitary) Inverse() Gate {

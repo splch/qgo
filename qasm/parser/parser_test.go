@@ -202,7 +202,7 @@ rz(pi ** 2) q[0];
 	}
 
 	p2 := ops[2].Gate.Params()[0]
-	if math.Abs(p2-math.Pow(math.Pi, 2)) > 1e-10 {
+	if math.Abs(p2-math.Pi*math.Pi) > 1e-10 {
 		t.Errorf("rz param = %v, want pi^2", p2)
 	}
 }

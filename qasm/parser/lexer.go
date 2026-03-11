@@ -9,11 +9,11 @@ import (
 
 // lexer tokenizes OpenQASM 3.0 source.
 type lexer struct {
-	input   string
-	pos     int // current byte position
-	line    int
-	col     int
-	tokens  []token.Token
+	input  string
+	pos    int // current byte position
+	line   int
+	col    int
+	tokens []token.Token
 }
 
 func newLexer(input string) *lexer {
@@ -126,24 +126,26 @@ func (l *lexer) tokenize() []token.Token {
 			}
 		case ch == '<':
 			l.advance()
-			if l.pos < len(l.input) && l.input[l.pos] == '=' {
+			switch {
+			case l.pos < len(l.input) && l.input[l.pos] == '=':
 				l.emit(token.LE, "<=", startLine, startCol)
 				l.advance()
-			} else if l.pos < len(l.input) && l.input[l.pos] == '<' {
+			case l.pos < len(l.input) && l.input[l.pos] == '<':
 				l.emit(token.LSHIFT, "<<", startLine, startCol)
 				l.advance()
-			} else {
+			default:
 				l.emit(token.LT, "<", startLine, startCol)
 			}
 		case ch == '>':
 			l.advance()
-			if l.pos < len(l.input) && l.input[l.pos] == '=' {
+			switch {
+			case l.pos < len(l.input) && l.input[l.pos] == '=':
 				l.emit(token.GE, ">=", startLine, startCol)
 				l.advance()
-			} else if l.pos < len(l.input) && l.input[l.pos] == '>' {
+			case l.pos < len(l.input) && l.input[l.pos] == '>':
 				l.emit(token.RSHIFT, ">>", startLine, startCol)
 				l.advance()
-			} else {
+			default:
 				l.emit(token.GT, ">", startLine, startCol)
 			}
 		case ch == '&':

@@ -86,7 +86,7 @@ func New(name string, opts ...Option) *Backend {
 	return b
 }
 
-func (b *Backend) Name() string         { return b.name }
+func (b *Backend) Name() string          { return b.name }
 func (b *Backend) Target() target.Target { return b.tgt }
 
 // Submit returns a new job or the configured error.

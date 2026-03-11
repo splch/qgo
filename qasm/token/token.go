@@ -11,10 +11,10 @@ const (
 	COMMENT
 
 	// Literals
-	IDENT   // identifier
-	INT     // integer literal
-	FLOAT   // floating point literal
-	STRING  // string literal
+	IDENT  // identifier
+	INT    // integer literal
+	FLOAT  // floating point literal
+	STRING // string literal
 
 	// Operators & delimiters
 	LPAREN    // (
@@ -78,10 +78,10 @@ const (
 	INV
 	POW
 	GPHASE
-	U       // built-in U gate
-	PI      // pi constant
-	EULER   // euler constant
-	TAU     // tau constant
+	U     // built-in U gate
+	PI    // pi constant
+	EULER // euler constant
+	TAU   // tau constant
 	TRUE
 	FALSE
 	LET

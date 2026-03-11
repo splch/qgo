@@ -47,7 +47,7 @@ func New(opts ...Option) *Backend {
 	return b
 }
 
-func (b *Backend) Name() string         { return "local.simulator" }
+func (b *Backend) Name() string          { return "local.simulator" }
 func (b *Backend) Target() target.Target { return target.Simulator }
 
 // Submit executes the circuit synchronously and returns a completed job.

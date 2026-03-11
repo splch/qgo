@@ -172,11 +172,11 @@ func buildBarrierCircuit() (*ir.Circuit, error) {
 // testBarrier is a minimal barrier gate for testing.
 type testBarrier int
 
-func (g testBarrier) Name() string            { return "barrier" }
-func (g testBarrier) Qubits() int             { return int(g) }
-func (g testBarrier) Matrix() []complex128     { return nil }
-func (g testBarrier) Params() []float64       { return nil }
-func (g testBarrier) Inverse() gate.Gate      { return g }
+func (g testBarrier) Name() string                     { return "barrier" }
+func (g testBarrier) Qubits() int                      { return int(g) }
+func (g testBarrier) Matrix() []complex128             { return nil }
+func (g testBarrier) Params() []float64                { return nil }
+func (g testBarrier) Inverse() gate.Gate               { return g }
 func (g testBarrier) Decompose(_ []int) []gate.Applied { return nil }
 
 func TestDefaultCostWithTwoQubitGates(t *testing.T) {

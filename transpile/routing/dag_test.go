@@ -135,9 +135,9 @@ func TestDAGPredCountBugFix(t *testing.T) {
 	// old code (because it appeared at k=2 for q0 giving +=2, and potentially
 	// on another qubit). The fix ensures each qubit line contributes exactly 1.
 	ops := []ir.Operation{
-		{Gate: gate.H, Qubits: []int{0}},     // op 0: q0
-		{Gate: gate.X, Qubits: []int{0}},     // op 1: q0
-		{Gate: gate.Y, Qubits: []int{0}},     // op 2: q0
+		{Gate: gate.H, Qubits: []int{0}},       // op 0: q0
+		{Gate: gate.X, Qubits: []int{0}},       // op 1: q0
+		{Gate: gate.Y, Qubits: []int{0}},       // op 2: q0
 		{Gate: gate.CNOT, Qubits: []int{0, 1}}, // op 3: q0, q1
 	}
 	d := newDAG(ops, 2, false)

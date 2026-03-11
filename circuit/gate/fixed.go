@@ -9,10 +9,10 @@ type fixed struct {
 	matrix []complex128
 }
 
-func (g *fixed) Name() string        { return g.name }
-func (g *fixed) Qubits() int         { return g.n }
+func (g *fixed) Name() string         { return g.name }
+func (g *fixed) Qubits() int          { return g.n }
 func (g *fixed) Matrix() []complex128 { return g.matrix }
-func (g *fixed) Params() []float64   { return nil }
+func (g *fixed) Params() []float64    { return nil }
 
 func (g *fixed) Inverse() Gate {
 	// Self-adjoint gates return themselves.

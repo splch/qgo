@@ -109,4 +109,3 @@ func TestMergeParams(t *testing.T) {
 		t.Errorf("Parameters() = %d params, want 2 (deduplicated)", len(params))
 	}
 }
-

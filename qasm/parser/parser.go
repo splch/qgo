@@ -416,9 +416,10 @@ func (p *parser) isAssignment() bool {
 		depth := 1
 		i++
 		for i < len(p.tokens) && depth > 0 {
-			if p.tokens[i].Type == token.LBRACKET {
+			switch p.tokens[i].Type {
+			case token.LBRACKET:
 				depth++
-			} else if p.tokens[i].Type == token.RBRACKET {
+			case token.RBRACKET:
 				depth--
 			}
 			i++
@@ -1007,21 +1008,21 @@ func builtinGates() map[string]*gatedef {
 // Pseudo-gates for barrier and reset.
 type barrierGate struct{ n int }
 
-func (g barrierGate) Name() string                       { return "barrier" }
-func (g barrierGate) Qubits() int                        { return g.n }
-func (g barrierGate) Matrix() []complex128                { return nil }
-func (g barrierGate) Params() []float64                  { return nil }
-func (g barrierGate) Inverse() gate.Gate                 { return g }
-func (g barrierGate) Decompose(_ []int) []gate.Applied   { return nil }
+func (g barrierGate) Name() string                     { return "barrier" }
+func (g barrierGate) Qubits() int                      { return g.n }
+func (g barrierGate) Matrix() []complex128             { return nil }
+func (g barrierGate) Params() []float64                { return nil }
+func (g barrierGate) Inverse() gate.Gate               { return g }
+func (g barrierGate) Decompose(_ []int) []gate.Applied { return nil }
 
 type resetGate struct{}
 
-func (g resetGate) Name() string                       { return "reset" }
-func (g resetGate) Qubits() int                        { return 1 }
-func (g resetGate) Matrix() []complex128                { return nil }
-func (g resetGate) Params() []float64                  { return nil }
-func (g resetGate) Inverse() gate.Gate                 { return g }
-func (g resetGate) Decompose(_ []int) []gate.Applied   { return nil }
+func (g resetGate) Name() string                     { return "reset" }
+func (g resetGate) Qubits() int                      { return 1 }
+func (g resetGate) Matrix() []complex128             { return nil }
+func (g resetGate) Params() []float64                { return nil }
+func (g resetGate) Inverse() gate.Gate               { return g }
+func (g resetGate) Decompose(_ []int) []gate.Applied { return nil }
 
 type opaqueGate struct {
 	name   string
@@ -1029,9 +1030,9 @@ type opaqueGate struct {
 	params []float64
 }
 
-func (g opaqueGate) Name() string                       { return g.name }
-func (g opaqueGate) Qubits() int                        { return g.n }
-func (g opaqueGate) Matrix() []complex128                { return nil }
-func (g opaqueGate) Params() []float64                  { return g.params }
-func (g opaqueGate) Inverse() gate.Gate                 { return g }
-func (g opaqueGate) Decompose(_ []int) []gate.Applied   { return nil }
+func (g opaqueGate) Name() string                     { return g.name }
+func (g opaqueGate) Qubits() int                      { return g.n }
+func (g opaqueGate) Matrix() []complex128             { return nil }
+func (g opaqueGate) Params() []float64                { return g.params }
+func (g opaqueGate) Inverse() gate.Gate               { return g }
+func (g opaqueGate) Decompose(_ []int) []gate.Applied { return nil }

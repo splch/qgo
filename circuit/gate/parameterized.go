@@ -14,10 +14,10 @@ type parameterized struct {
 	matrix []complex128
 }
 
-func (g *parameterized) Name() string         { return g.name }
-func (g *parameterized) Qubits() int          { return g.n }
-func (g *parameterized) Matrix() []complex128  { return g.matrix }
-func (g *parameterized) Params() []float64    { return g.params }
+func (g *parameterized) Name() string                { return g.name }
+func (g *parameterized) Qubits() int                 { return g.n }
+func (g *parameterized) Matrix() []complex128        { return g.matrix }
+func (g *parameterized) Params() []float64           { return g.params }
 func (g *parameterized) Decompose(_ []int) []Applied { return nil }
 
 func (g *parameterized) Inverse() Gate {

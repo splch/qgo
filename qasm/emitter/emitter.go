@@ -205,4 +205,3 @@ func qasmGateName(name string) string {
 	}
 	return strings.ToLower(name)
 }
-

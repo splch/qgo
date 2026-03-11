@@ -44,13 +44,14 @@ func circuitUnitary2q(ops []ir.Operation) []complex128 {
 			opMat = apply1qOp(op.Gate, op.Qubits[0])
 		case 2:
 			q0, q1 := op.Qubits[0], op.Qubits[1]
-			if q0 == 0 && q1 == 1 {
+			switch {
+			case q0 == 0 && q1 == 1:
 				opMat = op.Gate.Matrix()
-			} else if q0 == 1 && q1 == 0 {
+			case q0 == 1 && q1 == 0:
 				// CNOT(1,0): swap, apply CNOT(0,1), swap
 				sw := gate.SWAP.Matrix()
 				opMat = MatMul(sw, MatMul(op.Gate.Matrix(), sw, 4), 4)
-			} else {
+			default:
 				opMat = op.Gate.Matrix()
 			}
 		default:

@@ -11,8 +11,8 @@ func TestNormalizeAngle(t *testing.T) {
 	}{
 		{0, 0},
 		{math.Pi, math.Pi},
-		{-math.Pi, math.Pi},            // edge: -pi wraps to pi
-		{3 * math.Pi, math.Pi},          // 3pi wraps to pi
+		{-math.Pi, math.Pi},    // edge: -pi wraps to pi
+		{3 * math.Pi, math.Pi}, // 3pi wraps to pi
 		{math.Pi / 2, math.Pi / 2},
 		{-math.Pi / 2, -math.Pi / 2},
 		{5 * math.Pi / 4, -3 * math.Pi / 4},

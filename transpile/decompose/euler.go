@@ -65,19 +65,20 @@ func EulerZYZ(m []complex128) (alpha, beta, gamma, phase float64) {
 	absB := cmplx.Abs(b)
 	beta = 2 * math.Acos(clamp(cmplx.Abs(a), 0, 1))
 
-	if absB < 1e-10 {
+	switch {
+	case absB < 1e-10:
 		// Near identity: Rz(alpha+gamma). Assign all to alpha.
 		// a = e^{-i(α+γ)/2}, so Phase(a) = -(α+γ)/2, thus α = -2·Phase(a).
 		alpha = -2 * cmplx.Phase(a)
 		beta = 0
 		gamma = 0
-	} else if cmplx.Abs(a) < 1e-10 {
+	case cmplx.Abs(a) < 1e-10:
 		// beta ≈ π: cos(β/2) ≈ 0, so use b.
 		// b = -sin(β/2)·e^{-i(α-γ)/2}, Phase(-b) = -(α-γ)/2
 		alpha = -2 * cmplx.Phase(-b)
 		beta = math.Pi
 		gamma = 0
-	} else {
+	default:
 		// General case.
 		// a = cos(β/2) · e^{-i(α+γ)/2}  →  Phase(a) = -(α+γ)/2
 		// -b = sin(β/2) · e^{-i(α-γ)/2}  →  Phase(-b) = -(α-γ)/2
@@ -148,21 +149,22 @@ func EulerZXZ(m []complex128) (alpha, beta, gamma, phase float64) {
 
 	beta = 2 * math.Acos(clamp(cmplx.Abs(a), 0, 1))
 
-	if cmplx.Abs(b) < 1e-10 {
+	switch {
+	case cmplx.Abs(b) < 1e-10:
 		alpha = -2 * cmplx.Phase(a)
 		beta = 0
 		gamma = 0
-	} else if cmplx.Abs(a) < 1e-10 {
+	case cmplx.Abs(a) < 1e-10:
 		// beta ≈ π: b = -i·sin(β/2)·e^{-i(α-γ)/2}, so i·b = sin(β/2)·e^{-i(α-γ)/2}.
 		alpha = -2 * cmplx.Phase(1i*b)
 		beta = math.Pi
 		gamma = 0
-	} else {
+	default:
 		// a = cos(β/2) · e^{-i(α+γ)/2}  →  Phase(a) = -(α+γ)/2
 		// b = -i·sin(β/2) · e^{-i(α-γ)/2}, so i·b = sin(β/2)·e^{-i(α-γ)/2}
 		// Phase(i·b) = -(α-γ)/2
-		apg := cmplx.Phase(a)    // -(alpha+gamma)/2
-		amg := cmplx.Phase(1i*b) // -(alpha-gamma)/2
+		apg := cmplx.Phase(a)      // -(alpha+gamma)/2
+		amg := cmplx.Phase(1i * b) // -(alpha-gamma)/2
 		alpha = -(apg + amg)
 		gamma = -(apg - amg)
 	}

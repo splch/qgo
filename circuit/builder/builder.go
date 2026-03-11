@@ -262,9 +262,9 @@ func (b *Builder) Build() (*ir.Circuit, error) {
 // barrierGate is a pseudo-gate representing a barrier.
 type barrierGate struct{ n int }
 
-func (g barrierGate) Name() string            { return "barrier" }
-func (g barrierGate) Qubits() int             { return g.n }
-func (g barrierGate) Matrix() []complex128     { return nil }
-func (g barrierGate) Params() []float64       { return nil }
-func (g barrierGate) Inverse() gate.Gate      { return g }
+func (g barrierGate) Name() string                     { return "barrier" }
+func (g barrierGate) Qubits() int                      { return g.n }
+func (g barrierGate) Matrix() []complex128             { return nil }
+func (g barrierGate) Params() []float64                { return nil }
+func (g barrierGate) Inverse() gate.Gate               { return g }
 func (g barrierGate) Decompose(_ []int) []gate.Applied { return nil }

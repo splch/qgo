@@ -249,4 +249,3 @@ func TestTenQubits(t *testing.T) {
 		t.Errorf("expected q9 label:\n%s", got)
 	}
 }
-

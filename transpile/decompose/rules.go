@@ -241,7 +241,7 @@ func decompose3qToCX(g gate.Gate, qubits []int) []ir.Operation {
 	case gate.CSWAP:
 		// Fredkin = CX(q2,q1)·CCX(q0,q1,q2)·CX(q2,q1)
 		ccxOps := decompose3qToCX(gate.CCX, []int{q0, q1, q2})
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, 1+len(ccxOps)+1)
 		ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q2, q1}})
 		ops = append(ops, ccxOps...)
 		ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q2, q1}})
@@ -333,7 +333,8 @@ func euler1qToIonQ(g gate.Gate, q int) []ir.Operation {
 // More precisely: use GPI2 pair: GPI2(φ+π)·GPI2(φ) = RZ(2φ+π)
 // So RZ(θ) = GPI2((θ-π)/2 + π)·GPI2((θ-π)/2) ... this gets complex.
 // Simplest correct: GPI(θ/2)·GPI(0) = [[0,e^{-iθ/2}],[e^{iθ/2},0]]·[[0,1],[1,0]]
-//   = [[e^{-iθ/2},0],[0,e^{iθ/2}]] which is exactly RZ(θ)!
+//
+//	= [[e^{-iθ/2},0],[0,e^{iθ/2}]] which is exactly RZ(θ)!
 func rzToIonQ(theta float64, q int) []ir.Operation {
 	return []ir.Operation{
 		{Gate: gate.GPI(theta / 2), Qubits: []int{q}},
@@ -369,7 +370,7 @@ func decompose2qToIonQ(g gate.Gate, qubits []int) []ir.Operation {
 		// SWAP = 3 CNOTs
 		cnot01 := decompose2qToIonQ(gate.CNOT, []int{q0, q1})
 		cnot10 := decompose2qToIonQ(gate.CNOT, []int{q1, q0})
-		var ops []ir.Operation
+		ops := make([]ir.Operation, 0, len(cnot01)+len(cnot10)+len(cnot01))
 		ops = append(ops, cnot01...)
 		ops = append(ops, cnot10...)
 		ops = append(ops, cnot01...)
@@ -426,4 +427,3 @@ func expandOpsToIonQ(ops []ir.Operation) []ir.Operation {
 	}
 	return result
 }
-

@@ -37,9 +37,9 @@ func New(name string, numQubits, numClbits int, ops []Operation, metadata map[st
 	}
 }
 
-func (c *Circuit) Name() string              { return c.name }
-func (c *Circuit) NumQubits() int             { return c.numQubits }
-func (c *Circuit) NumClbits() int             { return c.numClbits }
+func (c *Circuit) Name() string   { return c.name }
+func (c *Circuit) NumQubits() int { return c.numQubits }
+func (c *Circuit) NumClbits() int { return c.numClbits }
 func (c *Circuit) Ops() []Operation {
 	out := make([]Operation, len(c.ops))
 	copy(out, c.ops)
@@ -165,8 +165,8 @@ func FreeParameters(c *Circuit) []string {
 
 // Stats holds circuit statistics.
 type Stats struct {
-	Depth        int
-	GateCount    int
+	Depth         int
+	GateCount     int
 	TwoQubitGates int
-	Params       int
+	Params        int
 }
