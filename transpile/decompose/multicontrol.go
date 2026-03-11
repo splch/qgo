@@ -43,12 +43,10 @@ func decomposeControlled1Q(u gate.Gate, controls []int, target int) []ir.Operati
 	n := len(controls)
 
 	if n == 1 {
-		// Base case: single-controlled gate. Check known gates first.
 		return decomposeSingleControlled(u, controls[0], target)
 	}
 
 	if n == 2 && isXGate(u) {
-		// CCX: use standard Toffoli decomposition.
 		return decomposeCCX(controls[0], controls[1], target)
 	}
 
@@ -57,15 +55,15 @@ func decomposeControlled1Q(u gate.Gate, controls []int, target int) []ir.Operati
 		return decomposeMCX(controls, target)
 	}
 
-	// General C^n(U): decompose U = AXBXC where ABC = I.
-	// Use the identity: C^n(U) = C^{n-1}(C) · CX(last_ctrl, target) · C^{n-1}(B) · CX(last_ctrl, target) · A
-	// where U = A · X · B · X · C (Euler decomposition).
+	// General C^n(U): reduce to C^n(X) + single-qubit gates.
 	return decomposeGeneralControlled(u, controls, target)
 }
 
-// decomposeSingleControlled decomposes C(U) for a single-qubit U.
+// decomposeSingleControlled decomposes C(U) for a single-qubit U into CX + 1Q gates.
+// Uses the standard decomposition: C(U) where U = e^{iα} · A · X · B · X · C, ABC = I.
+// C(U) = C(tgt) · CX(ctrl,tgt) · B(tgt) · CX(ctrl,tgt) · A(tgt) · Phase(α)(ctrl)
 func decomposeSingleControlled(u gate.Gate, control, target int) []ir.Operation {
-	// Check for known controlled gates.
+	// Check for known controlled gates that are already primitive.
 	if isXGate(u) {
 		return []ir.Operation{{Gate: gate.CNOT, Qubits: []int{control, target}}}
 	}
@@ -76,9 +74,49 @@ func decomposeSingleControlled(u gate.Gate, control, target int) []ir.Operation 
 		return []ir.Operation{{Gate: gate.CY, Qubits: []int{control, target}}}
 	}
 
-	// General C(U): emit as a controlled gate and let the 2-qubit decomposer handle it.
-	cg := gate.Controlled(u, 1)
-	return []ir.Operation{{Gate: cg, Qubits: []int{control, target}}}
+	// Standard CU decomposition (Nielsen & Chuang, Theorem 4.3).
+	// U = e^{iδ} · Rz(α) · Ry(β) · Rz(γ)  (Euler ZYZ)
+	// Define: A = Rz(α) · Ry(β/2), B = Ry(-β/2) · Rz(-(α+γ)/2), C = Rz((γ-α)/2)
+	// Then ABC = I and U = e^{iδ} · AXBXC.
+	// Matrix form: C(U) = Phase(δ)(ctrl) · A(tgt) · CX · B(tgt) · CX · C(tgt)
+	// Circuit time order (left→right): C, CX, B, CX, A, Phase
+	alpha, beta, gamma, phase := EulerZYZ(u.Matrix())
+
+	var ops []ir.Operation
+
+	// C(tgt) = Rz((γ-α)/2) — applied first in circuit time
+	if !nearZero(gamma - alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ((gamma - alpha) / 2), Qubits: []int{target}})
+	}
+
+	// CX(ctrl, tgt)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{control, target}})
+
+	// B(tgt) = Ry(-β/2) · Rz(-(α+γ)/2); circuit order: Rz then Ry
+	if !nearZero(alpha + gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(-(alpha + gamma) / 2), Qubits: []int{target}})
+	}
+	if !nearZero(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RY(-beta / 2), Qubits: []int{target}})
+	}
+
+	// CX(ctrl, tgt)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{control, target}})
+
+	// A(tgt) = Rz(α) · Ry(β/2); circuit order: Ry then Rz
+	if !nearZero(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RY(beta / 2), Qubits: []int{target}})
+	}
+	if !nearZero(alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(alpha), Qubits: []int{target}})
+	}
+
+	// Phase(δ)(ctrl) for global phase correction.
+	if !nearZero(phase) {
+		ops = append(ops, ir.Operation{Gate: gate.Phase(phase), Qubits: []int{control}})
+	}
+
+	return ops
 }
 
 // decomposeCCX decomposes a Toffoli gate into CX + single-qubit.
@@ -104,7 +142,7 @@ func decomposeCCX(c0, c1, target int) []ir.Operation {
 
 // decomposeMCX decomposes C^n(X) for n >= 3 using recursive V-gate approach.
 // V = SX (sqrt of X), V† = SX†.
-// C^n(X) = C^{n-1}(V†) · CX(last_ctrl, target) · C^{n-1}(V) · CX(last_ctrl, target)
+// C^n(X) = C^{n-1}(V) · CX(last_ctrl, target) · C^{n-1}(V†) · CX(last_ctrl, target) · C^{n-1}(S)
 // This produces O(n²) CX gates total.
 func decomposeMCX(controls []int, target int) []ir.Operation {
 	n := len(controls)
@@ -135,74 +173,44 @@ func decomposeMCX(controls []int, target int) []ir.Operation {
 	// CX(lastCtrl, target)
 	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{lastCtrl, target}})
 
-	// C^{n-1}(Phase) on restCtrls -> lastCtrl to fix phase.
-	// The recursive V decomposition introduces a relative phase that needs correction.
-	// C^{n-1}(S) on restCtrls -> lastCtrl (since SX·SX = X up to phase S).
+	// C^{n-1}(S) on restCtrls -> lastCtrl to fix phase.
 	ops = append(ops, decomposeControlled1Q(gate.S, restCtrls, lastCtrl)...)
 
 	return ops
 }
 
-// decomposeGeneralControlled decomposes C^n(U) for general single-qubit U.
+// decomposeGeneralControlled decomposes C^n(U) for general single-qubit U with n >= 2.
+// Reduces to C^n(X) + single-qubit gates using:
+// U = e^{iδ} · AXBXC where ABC = I (Euler decomposition).
+// C^n(U) = Phase(δ)(ctrls) · A(tgt) · MCX(ctrls,tgt) · B(tgt) · MCX(ctrls,tgt) · C(tgt)
+// Circuit time order (left→right): C, MCX, B, MCX, A, Phase
+//
+//	+ phase correction on controls.
 func decomposeGeneralControlled(u gate.Gate, controls []int, target int) []ir.Operation {
-	n := len(controls)
-	if n == 1 {
-		return decomposeSingleControlled(u, controls[0], target)
-	}
-
-	// Decompose U into: U = Phase(delta) · RZ(alpha) · RY(beta) · RZ(gamma)
-	// Then: C^n(U) ≈ C^n(RZ(alpha)·RY(beta)·RZ(gamma)) · C^n(Phase(delta))
-	// Use the recursive approach:
-	// C^n(U) = A(tgt) · C^{n-1,n}(CX) · B(tgt) · C^{n-1,n}(CX) · C(tgt) · phase corrections
-	// where U = AXBXC, ABC = I
-
-	// Euler decompose: U = RZ(α) · RY(β) · RZ(γ) (up to global phase)
-	alpha, beta, gamma, _ := EulerZYZ(u.Matrix())
-
-	lastCtrl := controls[n-1]
-	restCtrls := controls[:n-1]
+	alpha, beta, gamma, phase := EulerZYZ(u.Matrix())
 
 	var ops []ir.Operation
 
-	// C = RZ((gamma-alpha)/2)
-	// B = RY(-beta/2) · RZ(-(gamma+alpha)/2)
-	// A = RY(beta/2) · RZ(alpha)
-	// We need: CX · B · CX · C on target, with C^{n-1} controlling the CXs.
-
-	c := (gamma - alpha) / 2.0
-	b1 := -(gamma + alpha) / 2.0
-
-	// Apply C to target.
-	if !nearZero(c) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(c), Qubits: []int{target}})
+	// C(tgt) = Rz((γ-α)/2) — applied first in circuit time
+	if !nearZero(gamma - alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ((gamma - alpha) / 2), Qubits: []int{target}})
 	}
 
-	// C^{n-1}(CX) from restCtrls control, lastCtrl target... wait, we need CX(lastCtrl, target).
-	// Actually the standard decomposition is:
-	// RZ(c)(tgt) · CNOT(lastCtrl, tgt) · RY(-β/2)·RZ(b1)(tgt) · CNOT(lastCtrl, tgt) · RY(β/2)·RZ(α)(tgt)
-	// Then make the CNOTs controlled by restCtrls.
+	// C^n(X) on all controls -> target
+	ops = append(ops, decomposeMCX(controls, target)...)
 
-	// CNOT(lastCtrl, target) -> C^{n-1}(CNOT)(restCtrls, lastCtrl, target) = MCX on restCtrls+lastCtrl -> target
-	// This still requires MCX decomposition. Let's do it:
-
-	// Step 1: RZ(c) on target
-	// (already done above)
-
-	// Step 2: CNOT(lastCtrl, target)
-	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{lastCtrl, target}})
-
-	// Step 3: RY(-beta/2) · RZ(b1) on target
-	if !nearZero(b1) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(b1), Qubits: []int{target}})
+	// B(tgt) = Ry(-β/2) · Rz(-(α+γ)/2); circuit order: Rz then Ry
+	if !nearZero(alpha + gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(-(alpha + gamma) / 2), Qubits: []int{target}})
 	}
 	if !nearZero(beta) {
 		ops = append(ops, ir.Operation{Gate: gate.RY(-beta / 2), Qubits: []int{target}})
 	}
 
-	// Step 4: CNOT(lastCtrl, target)
-	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{lastCtrl, target}})
+	// C^n(X) on all controls -> target
+	ops = append(ops, decomposeMCX(controls, target)...)
 
-	// Step 5: RY(beta/2) · RZ(alpha) on target
+	// A(tgt) = Rz(α) · Ry(β/2); circuit order: Ry then Rz
 	if !nearZero(beta) {
 		ops = append(ops, ir.Operation{Gate: gate.RY(beta / 2), Qubits: []int{target}})
 	}
@@ -210,15 +218,14 @@ func decomposeGeneralControlled(u gate.Gate, controls []int, target int) []ir.Op
 		ops = append(ops, ir.Operation{Gate: gate.RZ(alpha), Qubits: []int{target}})
 	}
 
-	// Now replace the two CNOT(lastCtrl, target) with C^{n-1}-controlled CNOTs.
-	// This means we need C^{n-1}(X) on restCtrls -> lastCtrl applied at the CNOT points.
-	// But that makes the decomposition recursive, which is correct.
-
-	// The simple approach: just emit C^{n-1}(Phase) on restCtrls -> lastCtrl for phase correction.
-	// For n >= 2 controls, emit the phase kickback:
-	halfAlpha := (alpha + gamma) / 2.0
-	if !nearZero(halfAlpha) {
-		ops = append(ops, decomposeControlled1Q(gate.Phase(halfAlpha), restCtrls, lastCtrl)...)
+	// Phase correction: C^{n-1}(Phase(δ)) on controls[:-1] -> controls[-1].
+	if !nearZero(phase) {
+		n := len(controls)
+		if n == 1 {
+			ops = append(ops, ir.Operation{Gate: gate.Phase(phase), Qubits: []int{controls[0]}})
+		} else {
+			ops = append(ops, decomposeControlled1Q(gate.Phase(phase), controls[:n-1], controls[n-1])...)
+		}
 	}
 
 	return ops

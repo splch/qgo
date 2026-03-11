@@ -3,6 +3,7 @@ package densitymatrix
 import (
 	"fmt"
 	"math"
+	"math/cmplx"
 	"math/rand/v2"
 
 	"github.com/splch/qgo/circuit/gate"
@@ -222,6 +223,7 @@ func decomposeForDensity(op ir.Operation) []ir.Operation {
 }
 
 // decomposeControlledForDensity decomposes a controlled gate for density matrix sim.
+// Reduces any multi-controlled single-qubit gate to MCX + 1Q gates, then decomposes MCX.
 func decomposeControlledForDensity(op ir.Operation) []ir.Operation {
 	cg := op.Gate.(gate.ControlledGate)
 	nControls := cg.NumControls()
@@ -234,42 +236,18 @@ func decomposeControlledForDensity(op ir.Operation) []ir.Operation {
 		return []ir.Operation{op}
 	}
 
-	// For MCX: decompose using V-gate approach.
-	if inner.Qubits() == 1 {
-		if nControls == 1 {
-			return []ir.Operation{op}
-		}
-		// Create the controlled gate and let rules decompose it.
-		// Build: C^{n-1}(V) + CX + C^{n-1}(V†) + CX + C^{n-1}(Phase)
-		// Use SX as V (sqrt of X).
-		if inner == gate.X || inner.Name() == "X" {
-			return decomposeMCXForDensity(controls, targets[0])
-		}
-		// General: wrap with Controlled and recurse.
-		cInner := gate.Controlled(inner, nControls)
-		subOp := ir.Operation{Gate: cInner, Qubits: op.Qubits}
-		applied := subOp.Gate.Decompose(op.Qubits)
-		if applied != nil {
-			var result []ir.Operation
-			for _, a := range applied {
-				s := ir.Operation{Gate: a.Gate, Qubits: a.Qubits}
-				if a.Gate.Qubits() <= 2 {
-					result = append(result, s)
-				} else {
-					r := decomposeForDensity(s)
-					if r == nil {
-						return nil
-					}
-					result = append(result, r...)
-				}
-			}
-			return result
-		}
-		// Fallback: emit as single controlled gates via CX decomposition.
+	if inner.Qubits() != 1 {
 		return nil
 	}
 
-	return nil
+	// C^n(X): direct recursive decomposition.
+	if inner == gate.X || inner.Name() == "X" {
+		return decomposeMCXForDensity(controls, targets[0])
+	}
+
+	// General C^n(U): reduce to MCX + single-qubit gates using ABC decomposition.
+	// U = e^{iδ} · AXBXC where ABC = I.
+	return decomposeGeneralControlledForDensity(inner, controls, targets[0])
 }
 
 // decomposeMCXForDensity decomposes C^n(X) recursively for density matrix.
@@ -325,14 +303,98 @@ func decomposeControlled1QForDensity(u gate.Gate, controls []int, target int) []
 		cg := gate.Controlled(u, 1)
 		return []ir.Operation{{Gate: cg, Qubits: []int{controls[0], target}}}
 	}
-	if len(controls) == 2 && (u == gate.X || u.Name() == "X") {
+	if u == gate.X || u.Name() == "X" {
 		return decomposeMCXForDensity(controls, target)
 	}
-	// For n >= 2: use a controlled gate and rely on it being a 2-qubit gate
-	// after the recursion bottoms out.
-	cg := gate.Controlled(u, len(controls))
-	qs := make([]int, 0, len(controls)+1)
-	qs = append(qs, controls...)
-	qs = append(qs, target)
-	return decomposeForDensity(ir.Operation{Gate: cg, Qubits: qs})
+	// General C^n(U): reduce to MCX + 1Q gates.
+	return decomposeGeneralControlledForDensity(u, controls, target)
+}
+
+// decomposeGeneralControlledForDensity decomposes C^n(U) for general single-qubit U
+// by reducing to MCX + single-qubit rotations using the ABC decomposition.
+func decomposeGeneralControlledForDensity(u gate.Gate, controls []int, target int) []ir.Operation {
+	// U = e^{iδ} · Rz(α) · Ry(β) · Rz(γ)
+	// C^n(U) = A(tgt) · MCX(ctrls,tgt) · B(tgt) · MCX(ctrls,tgt) · C(tgt) + phase
+	m := u.Matrix()
+	// Simple Euler ZYZ decomposition inline.
+	det := m[0]*m[3] - m[1]*m[2]
+	detPhase := real(cmplx.Log(det)) / 2 // imaginary part
+	_ = detPhase
+	phase := imag(cmplx.Log(det)) / 2
+	factor := cmplx.Exp(complex(0, -phase))
+	a := m[0] * factor
+	b := m[1] * factor
+
+	absA := cmplx.Abs(a)
+	beta := 2 * math.Acos(clamp(absA, 0, 1))
+
+	var alpha, gamma float64
+	if cmplx.Abs(b) < 1e-10 {
+		alpha = -2 * cmplx.Phase(a)
+		gamma = 0
+	} else if cmplx.Abs(a) < 1e-10 {
+		alpha = -2 * cmplx.Phase(-b)
+		beta = math.Pi
+		gamma = 0
+	} else {
+		apg := cmplx.Phase(a)
+		amg := cmplx.Phase(-b)
+		alpha = -(apg + amg)
+		gamma = -(apg - amg)
+	}
+
+	var ops []ir.Operation
+
+	// C(tgt) = Rz((γ-α)/2) — applied first in circuit time
+	if !dNearZero(gamma - alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ((gamma - alpha) / 2), Qubits: []int{target}})
+	}
+
+	// MCX
+	ops = append(ops, decomposeMCXForDensity(controls, target)...)
+
+	// B(tgt) = Ry(-β/2) · Rz(-(α+γ)/2); circuit order: Rz then Ry
+	if !dNearZero(alpha + gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(-(alpha + gamma) / 2), Qubits: []int{target}})
+	}
+	if !dNearZero(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RY(-beta / 2), Qubits: []int{target}})
+	}
+
+	// MCX
+	ops = append(ops, decomposeMCXForDensity(controls, target)...)
+
+	// A(tgt) = Rz(α) · Ry(β/2); circuit order: Ry then Rz
+	if !dNearZero(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RY(beta / 2), Qubits: []int{target}})
+	}
+	if !dNearZero(alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(alpha), Qubits: []int{target}})
+	}
+
+	// Phase correction.
+	if !dNearZero(phase) {
+		n := len(controls)
+		if n == 1 {
+			ops = append(ops, ir.Operation{Gate: gate.Phase(phase), Qubits: []int{controls[0]}})
+		} else {
+			ops = append(ops, decomposeControlled1QForDensity(gate.Phase(phase), controls[:n-1], controls[n-1])...)
+		}
+	}
+
+	return ops
+}
+
+func dNearZero(x float64) bool {
+	return math.Abs(math.Remainder(x, 2*math.Pi)) < 1e-10
+}
+
+func clamp(v, lo, hi float64) float64 {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }
