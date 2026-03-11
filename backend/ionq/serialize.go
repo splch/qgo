@@ -64,11 +64,12 @@ func detectGateset(c *ir.Circuit) (string, error) {
 		if name == "barrier" || name == "I" {
 			continue
 		}
-		if nativeGates[name] {
+		switch {
+		case nativeGates[name]:
 			hasNative = true
-		} else if qisGates[name] || qisGates[op.Gate.Name()] {
+		case qisGates[name] || qisGates[op.Gate.Name()]:
 			hasQIS = true
-		} else {
+		default:
 			return "", fmt.Errorf("ionq: unsupported gate %q", op.Gate.Name())
 		}
 	}

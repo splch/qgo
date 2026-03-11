@@ -137,13 +137,14 @@ func Fprint(w io.Writer, c *ir.Circuit, opts ...Option) error {
 			cw := colWidths[col]
 			cell := grid[q][col]
 
-			if cell == "+" {
+			switch {
+			case cell == "+":
 				// Vertical connector crosses this wire.
 				buf.WriteString(dashPad("+", cw))
-			} else if cell == "" {
+			case cell == "":
 				// Empty wire.
 				buf.WriteString(strings.Repeat("-", cw+2))
-			} else {
+			default:
 				// Gate label, centered with dashes.
 				buf.WriteString(dashPad(cell, cw))
 			}

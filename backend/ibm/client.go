@@ -123,7 +123,7 @@ func (c *httpClient) doOnce(ctx context.Context, method, path string, body, resp
 		}
 		return fmt.Errorf("ibm: http request: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	respBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {

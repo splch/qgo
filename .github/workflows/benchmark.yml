@@ -30,7 +30,7 @@ jobs:
             git switch --orphan gh-pages
             git commit --allow-empty -m "Initialize gh-pages for benchmark data"
             git push origin gh-pages
-            git switch -
+            git checkout main
           fi
 
       - name: Store benchmark results

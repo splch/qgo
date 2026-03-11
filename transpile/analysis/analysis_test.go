@@ -29,28 +29,22 @@ func TestBuildTimelines(t *testing.T) {
 	// Qubit 0: ops 0 (H) and 1 (CNOT)
 	if len(tl[0].Ops) != 2 {
 		t.Errorf("qubit 0: expected 2 ops, got %d", len(tl[0].Ops))
-	} else {
-		if tl[0].Ops[0] != 0 || tl[0].Ops[1] != 1 {
-			t.Errorf("qubit 0: expected ops [0,1], got %v", tl[0].Ops)
-		}
+	} else if tl[0].Ops[0] != 0 || tl[0].Ops[1] != 1 {
+		t.Errorf("qubit 0: expected ops [0,1], got %v", tl[0].Ops)
 	}
 
 	// Qubit 1: ops 1 (CNOT(0,1)) and 3 (CNOT(1,2))
 	if len(tl[1].Ops) != 2 {
 		t.Errorf("qubit 1: expected 2 ops, got %d", len(tl[1].Ops))
-	} else {
-		if tl[1].Ops[0] != 1 || tl[1].Ops[1] != 3 {
-			t.Errorf("qubit 1: expected ops [1,3], got %v", tl[1].Ops)
-		}
+	} else if tl[1].Ops[0] != 1 || tl[1].Ops[1] != 3 {
+		t.Errorf("qubit 1: expected ops [1,3], got %v", tl[1].Ops)
 	}
 
 	// Qubit 2: ops 2 (H) and 3 (CNOT(1,2))
 	if len(tl[2].Ops) != 2 {
 		t.Errorf("qubit 2: expected 2 ops, got %d", len(tl[2].Ops))
-	} else {
-		if tl[2].Ops[0] != 2 || tl[2].Ops[1] != 3 {
-			t.Errorf("qubit 2: expected ops [2,3], got %v", tl[2].Ops)
-		}
+	} else if tl[2].Ops[0] != 2 || tl[2].Ops[1] != 3 {
+		t.Errorf("qubit 2: expected ops [2,3], got %v", tl[2].Ops)
 	}
 
 	// Verify Qubit field is set correctly.

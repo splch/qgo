@@ -80,13 +80,13 @@ func Equivalent(a, b *ir.Circuit, tol float64) (bool, error) {
 // prependBasisPrep creates a new circuit with X gates prepended to prepare |idx>.
 func prependBasisPrep(c *ir.Circuit, idx int) *ir.Circuit {
 	n := c.NumQubits()
-	var prep []ir.Operation
+	var ops []ir.Operation
 	for q := range n {
 		if idx&(1<<q) != 0 {
-			prep = append(prep, ir.Operation{Gate: gate.X, Qubits: []int{q}})
+			ops = append(ops, ir.Operation{Gate: gate.X, Qubits: []int{q}})
 		}
 	}
-	ops := append(prep, c.Ops()...)
+	ops = append(ops, c.Ops()...)
 	return ir.New(c.Name(), n, c.NumClbits(), ops, c.Metadata())
 }
 

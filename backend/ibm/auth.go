@@ -66,7 +66,7 @@ func (tp *tokenProvider) getToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ibm: IAM token request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -87,11 +87,12 @@ func (tp *tokenProvider) getToken(ctx context.Context) (string, error) {
 	}
 
 	tp.token = tokenResp.AccessToken
-	if tokenResp.Expiration > 0 {
+	switch {
+	case tokenResp.Expiration > 0:
 		tp.expiry = time.Unix(tokenResp.Expiration, 0)
-	} else if tokenResp.ExpiresIn > 0 {
+	case tokenResp.ExpiresIn > 0:
 		tp.expiry = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	} else {
+	default:
 		// Default: assume 1 hour validity.
 		tp.expiry = time.Now().Add(time.Hour)
 	}

@@ -69,8 +69,7 @@ func commutesWithControl(g gate.Gate) bool {
 
 // commutesWithTarget: X-type gates commute through CNOT target.
 func commutesWithTarget(g gate.Gate) bool {
-	switch g {
-	case gate.X:
+	if g == gate.X {
 		return true
 	}
 	name := mathutil.StripParams(g.Name())
