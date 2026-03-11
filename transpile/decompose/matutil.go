@@ -157,6 +157,31 @@ func Eye(n int) []complex128 {
 	return m
 }
 
+// matMul2 multiplies two 2×2 matrices stored as flat [4]complex128 slices.
+func matMul2(a, b []complex128) []complex128 {
+	return []complex128{
+		a[0]*b[0] + a[1]*b[2], a[0]*b[1] + a[1]*b[3],
+		a[2]*b[0] + a[3]*b[2], a[2]*b[1] + a[3]*b[3],
+	}
+}
+
+// matAdj2 returns the conjugate transpose of a 2×2 matrix.
+func matAdj2(m []complex128) []complex128 {
+	return []complex128{
+		cmplx.Conj(m[0]), cmplx.Conj(m[2]),
+		cmplx.Conj(m[1]), cmplx.Conj(m[3]),
+	}
+}
+
+// rzMat returns the 2×2 Rz(theta) matrix: diag(e^{-i*theta/2}, e^{i*theta/2}).
+func rzMat(theta float64) []complex128 {
+	h := theta / 2
+	return []complex128{
+		cmplx.Exp(complex(0, -h)), 0,
+		0, cmplx.Exp(complex(0, h)),
+	}
+}
+
 // MatScale multiplies every element of m by scalar s.
 func MatScale(m []complex128, s complex128) []complex128 {
 	out := make([]complex128, len(m))

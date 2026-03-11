@@ -59,8 +59,10 @@ func tryLocalDecompose(m []complex128, q0, q1 int) []ir.Operation {
 	return nil
 }
 
-// kakGeneral implements the full KAK decomposition using M2 = Up^T · Up.
-func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
+// KakParams extracts the KAK decomposition parameters from a 4x4 unitary
+// without building a circuit. Returns the four 2x2 K-matrices, the Weyl
+// parameters (x,y,z), and the count of nonzero Weyl parameters.
+func KakParams(m []complex128) (k1l, k1r, k2l, k2r []complex128, x, y, z float64, nNonzero int) {
 	// 1. Normalize to SU(4).
 	det := det4x4(m)
 	detPhase := cmplx.Phase(det) / 4
@@ -82,7 +84,6 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 	d := MatMul(pTC, MatMul(m2, pC, 4), 4)
 
 	// 6. Try all 16 sign combinations for D^{1/2}.
-	// D[k,k] = e^{2i·φ_k}, and D^{1/2}[k] = e^{i·φ_k} or -e^{i·φ_k}.
 	var m2Phases [4]float64
 	for k := range 4 {
 		m2Phases[k] = cmplx.Phase(d[k*4+k])
@@ -100,16 +101,12 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 			}
 			dHalf[k] = cmplx.Exp(complex(0, hp))
 		}
-		// Build D^{-1/2} matrix.
 		dHalfInv := make([]complex128, 16)
 		for k := range 4 {
 			dHalfInv[k*4+k] = cmplx.Conj(dHalf[k])
 		}
-		// K1_mb = Up · P · D^{-1/2}
 		k1mb := MatMul(up, MatMul(pC, dHalfInv, 4), 4)
-		// K1 = Q · K1_mb · Q†
 		k1 := MatMul(magicQ, MatMul(k1mb, magicQAdj, 4), 4)
-		// Check if K1 is a tensor product.
 		al, ar := factorKronecker(k1)
 		prod := Tensor(al, 2, ar, 2)
 		if _, ok := GlobalPhase(prod, k1, 0.5); !ok {
@@ -119,7 +116,6 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 		if e > 0.1 {
 			continue
 		}
-		// Compute interaction parameters to count non-zero terms.
 		dHalfMat := make([]complex128, 16)
 		for k := range 4 {
 			dHalfMat[k*4+k] = dHalf[k]
@@ -141,7 +137,6 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 		if math.Abs(mz) > 1e-8 {
 			nz++
 		}
-		// Prefer fewer non-zero interaction parameters (fewer CNOTs), then smaller kronError.
 		if nz < bestNonzero || (nz == bestNonzero && e < bestErr) {
 			bestErr = e
 			bestMask = mask
@@ -166,41 +161,238 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 		dHalfMat[k*4+k] = dHalf[k]
 	}
 
-	// K2_mb = P^T, K1_mb = Up · P · D^{-1/2}
 	k1mb := MatMul(up, MatMul(pC, dHalfInv, 4), 4)
 	k2mb := pTC
 
-	// Convert to computational basis.
-	k1 := MatMul(magicQ, MatMul(k1mb, magicQAdj, 4), 4)
-	k2 := MatMul(magicQ, MatMul(k2mb, magicQAdj, 4), 4)
+	k1Full := MatMul(magicQ, MatMul(k1mb, magicQAdj, 4), 4)
+	k2Full := MatMul(magicQ, MatMul(k2mb, magicQAdj, 4), 4)
 
-	k1l, k1r := factorKronecker(k1)
-	k2l, k2r := factorKronecker(k2)
+	k1l, k1r = factorKronecker(k1Full)
+	k2l, k2r = factorKronecker(k2Full)
 
-	// 8. Compute Ud = Q · diag(D^{1/2}) · Q†.
+	// Extract Weyl parameters.
 	udComp := MatMul(magicQ, MatMul(dHalfMat, magicQAdj, 4), 4)
+	ud0 := udComp[0*4+0] + udComp[0*4+3]
+	ud1 := udComp[1*4+1] + udComp[1*4+2]
+	ud3 := udComp[0*4+0] - udComp[0*4+3]
+	phi0 := cmplx.Phase(ud0)
+	phi1 := cmplx.Phase(ud1)
+	phi3 := cmplx.Phase(ud3)
+	x = (phi0 + phi1) / 2
+	y = (phi1 + phi3) / 2
+	z = (phi0 + phi3) / 2
 
-	// 9. Extract Weyl parameters directly from Ud_comp matrix structure.
-	// Ud = exp(i*(x·XX + y·YY + z·ZZ)) has the form:
-	//   [0,0] = (d0+d3)/2,  [0,3] = (d0-d3)/2
-	//   [1,1] = (d1+d2)/2,  [1,2] = (d1-d2)/2
-	// where d0=e^{i(x-y+z)}, d1=e^{i(x+y-z)}, d2=e^{i(-x-y-z)}, d3=e^{i(-x+y+z)}.
-	ud0 := udComp[0*4+0] + udComp[0*4+3] // d0
-	ud1 := udComp[1*4+1] + udComp[1*4+2] // d1
-	ud3 := udComp[0*4+0] - udComp[0*4+3] // d3
-	phi0 := cmplx.Phase(ud0) // x - y + z
-	phi1 := cmplx.Phase(ud1) // x + y - z
-	phi3 := cmplx.Phase(ud3) // -x + y + z
-	x := (phi0 + phi1) / 2
-	y := (phi1 + phi3) / 2
-	z := (phi0 + phi3) / 2
+	const tol = 1e-8
+	nNonzero = 0
+	if math.Abs(x) > tol {
+		nNonzero++
+	}
+	if math.Abs(y) > tol {
+		nNonzero++
+	}
+	if math.Abs(z) > tol {
+		nNonzero++
+	}
+	return
+}
 
-	// 10. Build the CNOT circuit for Ud.
-	udOps := udCircuit(x, y, z, q0, q1)
+// kakGeneral implements the full KAK decomposition using optimal CNOT counts.
+func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
+	k1l, k1r, k2l, k2r, x, y, z, nNonzero := KakParams(m)
+
+	if nNonzero == 0 {
+		// Local unitary (shouldn't normally reach here).
+		var ops []ir.Operation
+		k := matMul2(k1l, k2l)
+		ops = append(ops, eulerFromMatrix(k, q0)...)
+		k = matMul2(k1r, k2r)
+		ops = append(ops, eulerFromMatrix(k, q1)...)
+		return ops
+	}
+	if nNonzero == 1 && isCNOTEquiv(x, y, z) {
+		return oneCNOTCircuit(k1l, k1r, k2l, k2r, q0, q1)
+	}
+	if nNonzero == 1 {
+		return twoCNOTCircuit(x, y, z, k1l, k1r, k2l, k2r, q0, q1)
+	}
+	// nNonzero >= 2: optimal 3-CNOT path.
+	return threeCNOTCircuit(x, y, z, k1l, k1r, k2l, k2r, q0, q1)
+}
+
+// isCNOTEquiv checks if Weyl parameters correspond to a CNOT-class gate
+// (exactly one parameter = pi/4).
+func isCNOTEquiv(x, y, z float64) bool {
+	const tol = 1e-6
+	check := func(v float64) bool {
+		return math.Abs(math.Abs(v)-math.Pi/4) < tol
+	}
+	ax, ay, az := math.Abs(x) > 1e-8, math.Abs(y) > 1e-8, math.Abs(z) > 1e-8
+	if ax && !ay && !az {
+		return check(x)
+	}
+	if !ax && ay && !az {
+		return check(y)
+	}
+	if !ax && !ay && az {
+		return check(z)
+	}
+	return false
+}
+
+// Pre-computed 2x2 matrices for the 3-CNOT decomposition template.
+// Combines analytical K-matrices from Vatan-Williams (quant-ph/0308006)
+// with CNOT's own KAK K-matrices, computed once in init().
+var (
+	_u0l, _u0r                                 []complex128
+	_u1l                                       []complex128
+	_u1ra, _u1rb                               []complex128
+	_u2la, _u2lb                               []complex128
+	_u2ra, _u2rb                               []complex128
+	_u3l, _u3r                                 []complex128
+	_bK1lAdj, _bK1rAdj, _bK2lAdj, _bK2rAdj   []complex128
+)
+
+func init() {
+	inv := complex(1.0/math.Sqrt2, 0)
+	magicQ = []complex128{
+		inv, 0, 0, inv * 1i,
+		0, inv * 1i, inv, 0,
+		0, inv * 1i, -inv, 0,
+		inv, 0, 0, -inv * 1i,
+	}
+	magicQAdj = MatAdj(magicQ, 4)
+
+	// Decompose CNOT to get basis K-matrices (used by oneCNOTCircuit
+	// and as building blocks for the 3-CNOT u-matrices).
+	bK1l, bK1r, bK2l, bK2r, _, _, _, _ := KakParams(gate.CNOT.Matrix())
+	_bK1lAdj = matAdj2(bK1l)
+	_bK1rAdj = matAdj2(bK1r)
+	_bK2lAdj = matAdj2(bK2l)
+	_bK2rAdj = matAdj2(bK2r)
+
+	// Analytical K-matrices from Vatan-Williams (quant-ph/0308006),
+	// specialized for CNOT as basis gate (b=0).
+	// These describe three different equivalent decompositions of the
+	// basis gate, providing enough degrees of freedom to parametrize
+	// all three Weyl coordinates independently in a 3-CNOT circuit.
+	invP := complex(0.5, -0.5) // 1/(1+i) = (1-i)/2
+	invM := complex(0.5, 0.5)  // 1/(1-i) = (1+i)/2
+
+	K11l := []complex128{invP * (-1i), invP, invP * (-1i), -invP}
+	K11r := []complex128{inv * 1i, -inv, inv, inv * (-1i)}
+	K12l := []complex128{invP * 1i, invP * 1i, -invP, invP}
+	K12r := []complex128{inv * 1i, inv, -inv, inv * (-1i)}
+	K32lK21l := []complex128{inv * complex(1, 1), 0, 0, inv * complex(1, -1)}
+	K21r := []complex128{invM * (-1i), invM, invM * 1i, invM}
+	K22l := []complex128{inv, -inv, inv, inv}
+	K22r := []complex128{0, 1, -1, 0}
+	K31l := []complex128{inv, inv, -inv, inv}
+	K31r := []complex128{1i, 0, 0, -1i}
+	K32r := []complex128{invM, -invM, invM * (-1i), invM * (-1i)}
+
+	// Pre-compute the 11 u-matrices for the 3-CNOT template:
+	//   q0: [U3l]--*--[U2l]--*--[U1l]--*--[U0l]
+	//              |         |         |
+	//   q1: [U3r]--X--[U2r]--X--[U1r]--X--[U0r]
+	_u0l = matMul2(K31l, _bK1lAdj)
+	_u0r = matMul2(K31r, _bK1rAdj)
+	_u1l = matMul2(_bK2lAdj, matMul2(K32lK21l, _bK1lAdj))
+	_u1ra = matMul2(_bK2rAdj, K32r)
+	_u1rb = matMul2(K21r, _bK1rAdj)
+	_u2la = matMul2(_bK2lAdj, K22l)
+	_u2lb = matMul2(K11l, _bK1lAdj)
+	_u2ra = matMul2(_bK2rAdj, K22r)
+	_u2rb = matMul2(K11r, _bK1rAdj)
+	_u3l = matMul2(_bK2lAdj, K12l)
+	_u3r = matMul2(_bK2rAdj, K12r)
+}
+
+// threeCNOTCircuit builds the optimal 3-CNOT decomposition.
+//
+// Template:
+//
+//	q0: [U3l]--*--[U2l]--*--[U1l]--*--[U0l]
+//	            |         |         |
+//	q1: [U3r]--X--[U2r]--X--[U1r]--X--[U0r]
+//
+// Where each Weyl parameter (a,b,c) appears exactly once as an Rz rotation
+// inside the single-qubit gates between CX gates.
+func threeCNOTCircuit(a, b, c float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int) []ir.Operation {
+	// U0l = K1l · _u0l, U0r = K1r · _u0r  (absorb target K1)
+	U0l := matMul2(k1l, _u0l)
+	U0r := matMul2(k1r, _u0r)
+
+	// U1l = _u1l (constant)
+	U1l := _u1l
+
+	// U1r = _u1ra · Rz(-2c) · _u1rb  (depends on c)
+	U1r := matMul2(_u1ra, matMul2(rzMat(-2*c), _u1rb))
+
+	// U2l = _u2la · Rz(-2a) · _u2lb  (depends on a)
+	U2l := matMul2(_u2la, matMul2(rzMat(-2*a), _u2lb))
+
+	// U2r = _u2ra · Rz(2b) · _u2rb  (depends on b)
+	U2r := matMul2(_u2ra, matMul2(rzMat(2*b), _u2rb))
+
+	// U3l = _u3l · K2l, U3r = _u3r · K2r  (absorb target K2)
+	U3l := matMul2(_u3l, k2l)
+	U3r := matMul2(_u3r, k2r)
+
+	var ops []ir.Operation
+	ops = append(ops, eulerFromMatrix(U3l, q0)...)
+	ops = append(ops, eulerFromMatrix(U3r, q1)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrix(U2l, q0)...)
+	ops = append(ops, eulerFromMatrix(U2r, q1)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrix(U1l, q0)...)
+	ops = append(ops, eulerFromMatrix(U1r, q1)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrix(U0l, q0)...)
+	ops = append(ops, eulerFromMatrix(U0r, q1)...)
+	return ops
+}
+
+// oneCNOTCircuit decomposes a gate equivalent to CNOT (up to local unitaries)
+// using exactly 1 CX gate.
+//
+//	U = (K1l⊗K1r) · CX · (K2l⊗K2r)
+//	  = (K1l·bK1l†)⊗(K1r·bK1r†) · (bK1l⊗bK1r)·CX·(bK2l⊗bK2r) · (bK2l†·K2l)⊗(bK2r†·K2r)
+func oneCNOTCircuit(k1l, k1r, k2l, k2r []complex128, q0, q1 int) []ir.Operation {
+	Al := matMul2(k1l, _bK1lAdj)
+	Ar := matMul2(k1r, _bK1rAdj)
+	Bl := matMul2(_bK2lAdj, k2l)
+	Br := matMul2(_bK2rAdj, k2r)
+
+	var ops []ir.Operation
+	ops = append(ops, eulerFromMatrix(Bl, q0)...)
+	ops = append(ops, eulerFromMatrix(Br, q1)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrix(Al, q0)...)
+	ops = append(ops, eulerFromMatrix(Ar, q1)...)
+	return ops
+}
+
+// twoCNOTCircuit handles the single-nonzero-Weyl-parameter case using 2 CNOTs.
+func twoCNOTCircuit(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int) []ir.Operation {
+	const tol = 1e-8
+	xz := math.Abs(x) > tol
+	yz := math.Abs(y) > tol
+	zz := math.Abs(z) > tol
+
+	var udOps []ir.Operation
+	if zz {
+		udOps = zzCircuit(z, q0, q1)
+	} else if xz {
+		udOps = xxCircuit(x, q0, q1)
+	} else if yz {
+		udOps = yyCircuit(y, q0, q1)
+	}
+
+	// Compute the actual unitary of the Ud circuit, then correct for numerical error.
 	udMat := opsToUnitary4(udOps, q0, q1)
-
-	// 11. Compute correction: udComp may differ from udMat by numerical error.
-	correction := MatMul(udComp, MatAdj(udMat, 4), 4)
+	udTarget := weylUnitary(x, y, z)
+	correction := MatMul(udTarget, MatAdj(udMat, 4), 4)
 	k1Full := Tensor(k1l, 2, k1r, 2)
 	afterMat := MatMul(k1Full, correction, 4)
 	al, ar := factorKronecker(afterMat)
@@ -212,6 +404,18 @@ func kakGeneral(m []complex128, q0, q1 int) []ir.Operation {
 	ops = append(ops, eulerFromMatrix(al, q0)...)
 	ops = append(ops, eulerFromMatrix(ar, q1)...)
 	return ops
+}
+
+// weylUnitary computes exp(i*(x·XX + y·YY + z·ZZ)) as a 4x4 matrix.
+func weylUnitary(x, y, z float64) []complex128 {
+	// Diagonal in magic basis: d0=e^{i(x-y+z)}, d1=e^{i(x+y-z)},
+	// d2=e^{i(-x-y-z)}, d3=e^{i(-x+y+z)}.
+	dHalfMat := make([]complex128, 16)
+	dHalfMat[0] = cmplx.Exp(complex(0, x-y+z))
+	dHalfMat[5] = cmplx.Exp(complex(0, x+y-z))
+	dHalfMat[10] = cmplx.Exp(complex(0, -x-y-z))
+	dHalfMat[15] = cmplx.Exp(complex(0, -x+y+z))
+	return MatMul(magicQ, MatMul(dHalfMat, magicQAdj, 4), 4)
 }
 
 // kronError measures how far a 4x4 matrix is from a tensor product A⊗B.
@@ -228,55 +432,6 @@ func kronError(m []complex128) float64 {
 		e += cmplx.Abs(prod[i] - factor*m[i])
 	}
 	return e
-}
-
-// udCircuit builds a CNOT circuit implementing exp(i*(x·XX + y·YY + z·ZZ)).
-func udCircuit(x, y, z float64, q0, q1 int) []ir.Operation {
-	const tol = 1e-8
-	xz := math.Abs(x) > tol
-	yz := math.Abs(y) > tol
-	zz := math.Abs(z) > tol
-
-	nNonzero := 0
-	if xz {
-		nNonzero++
-	}
-	if yz {
-		nNonzero++
-	}
-	if zz {
-		nNonzero++
-	}
-
-	if nNonzero == 0 {
-		return nil
-	}
-
-	// Single-parameter cases: 2 CNOTs each.
-	if nNonzero == 1 {
-		if zz {
-			return zzCircuit(z, q0, q1)
-		}
-		if xz {
-			return xxCircuit(x, q0, q1)
-		}
-		return yyCircuit(y, q0, q1)
-	}
-
-	// Multi-parameter: concatenate individual circuits.
-	// Since [XX, YY] = [YY, ZZ] = [XX, ZZ] = 0,
-	// exp(i*(x·XX+y·YY+z·ZZ)) = exp(i·x·XX)·exp(i·y·YY)·exp(i·z·ZZ).
-	var ops []ir.Operation
-	if zz {
-		ops = append(ops, zzCircuit(z, q0, q1)...)
-	}
-	if yz {
-		ops = append(ops, yyCircuit(y, q0, q1)...)
-	}
-	if xz {
-		ops = append(ops, xxCircuit(x, q0, q1)...)
-	}
-	return ops
 }
 
 // zzCircuit: exp(i·c·ZZ) = CX · (I⊗Rz(-2c)) · CX. Uses 2 CNOTs.
@@ -302,7 +457,6 @@ func xxCircuit(a float64, q0, q1 int) []ir.Operation {
 }
 
 // yyCircuit: exp(i·b·YY) = (Rx(-π/2)⊗Rx(-π/2))·CX·(I⊗Rz(-2b))·CX·(Rx(π/2)⊗Rx(π/2)).
-// Uses Rx(π/2) basis change since Rx(-π/2)·Z·Rx(π/2) = Y.
 func yyCircuit(b float64, q0, q1 int) []ir.Operation {
 	return []ir.Operation{
 		{Gate: gate.RX(math.Pi / 2), Qubits: []int{q0}},
@@ -590,17 +744,6 @@ var (
 	magicQ    []complex128
 	magicQAdj []complex128
 )
-
-func init() {
-	inv := complex(1.0/math.Sqrt2, 0)
-	magicQ = []complex128{
-		inv, 0, 0, inv * 1i,
-		0, inv * 1i, inv, 0,
-		0, inv * 1i, -inv, 0,
-		inv, 0, 0, -inv * 1i,
-	}
-	magicQAdj = MatAdj(magicQ, 4)
-}
 
 func isGlobalPhaseOf(a, b []complex128, tol float64) bool {
 	_, ok := GlobalPhase(a, b, tol)

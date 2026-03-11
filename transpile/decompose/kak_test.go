@@ -13,33 +13,7 @@ const kakTol = 1e-6
 // kakCircuitUnitary computes the 4x4 unitary for a sequence of KAK output
 // operations on a 2-qubit system (qubits q0 and q1).
 func kakCircuitUnitary(ops []ir.Operation, q0, q1 int) []complex128 {
-	u := Eye(4)
-	for _, op := range ops {
-		var opMat []complex128
-		nq := op.Gate.Qubits()
-		switch {
-		case nq == 1:
-			if op.Qubits[0] == q0 {
-				opMat = Tensor(op.Gate.Matrix(), 2, Eye(2), 2)
-			} else {
-				opMat = Tensor(Eye(2), 2, op.Gate.Matrix(), 2)
-			}
-		case nq == 2:
-			a, b := op.Qubits[0], op.Qubits[1]
-			if a == q0 && b == q1 {
-				opMat = op.Gate.Matrix()
-			} else if a == q1 && b == q0 {
-				sw := gate.SWAP.Matrix()
-				opMat = MatMul(sw, MatMul(op.Gate.Matrix(), sw, 4), 4)
-			} else {
-				opMat = op.Gate.Matrix()
-			}
-		default:
-			opMat = op.Gate.Matrix()
-		}
-		u = MatMul(opMat, u, 4)
-	}
-	return u
+	return opsToUnitary4(ops, q0, q1)
 }
 
 func countCNOTs(ops []ir.Operation) int {
