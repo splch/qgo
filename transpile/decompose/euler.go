@@ -8,6 +8,48 @@ import (
 	"github.com/splch/qgo/circuit/ir"
 )
 
+// EulerBasis selects the Euler decomposition convention.
+type EulerBasis int
+
+const (
+	BasisZYZ EulerBasis = iota // RZ · RY · RZ (default, Quantinuum-native)
+	BasisZXZ                   // RZ · RX · RZ
+	BasisZSX                   // IBM-native: {RZ, SX, X}
+)
+
+// BasisForTarget selects the optimal Euler convention for a target's basis gates.
+func BasisForTarget(basisGates []string) EulerBasis {
+	basis := make(map[string]bool, len(basisGates))
+	for _, b := range basisGates {
+		basis[b] = true
+	}
+	if basis["*"] {
+		return BasisZYZ
+	}
+	if basis["SX"] && basis["RZ"] {
+		return BasisZSX
+	}
+	if basis["RX"] && basis["RZ"] {
+		return BasisZXZ
+	}
+	return BasisZYZ
+}
+
+// EulerDecomposeForBasis decomposes a single-qubit gate using the given Euler convention.
+func EulerDecomposeForBasis(g gate.Gate, qubit int, basis EulerBasis) []ir.Operation {
+	if g.Qubits() != 1 {
+		return nil
+	}
+	switch basis {
+	case BasisZSX:
+		return eulerZSX(g.Matrix(), qubit)
+	case BasisZXZ:
+		return eulerZXZ(g.Matrix(), qubit)
+	default:
+		return EulerDecompose(g, qubit)
+	}
+}
+
 // EulerZYZ decomposes a 2×2 unitary U into Rz(alpha)·Ry(beta)·Rz(gamma)
 // plus a global phase: U = e^{i·phase} · Rz(alpha) · Ry(beta) · Rz(gamma).
 func EulerZYZ(m []complex128) (alpha, beta, gamma, phase float64) {
@@ -112,4 +154,118 @@ func normalizeAngle(angle float64) float64 {
 		a += 2 * math.Pi
 	}
 	return a
+}
+
+// EulerZXZ decomposes a 2×2 unitary U into Rz(alpha)·Rx(beta)·Rz(gamma)
+// plus a global phase: U = e^{i·phase} · Rz(alpha) · Rx(beta) · Rz(gamma).
+func EulerZXZ(m []complex128) (alpha, beta, gamma, phase float64) {
+	det := Det2x2(m)
+	detPhase := cmplx.Phase(det) / 2
+	factor := cmplx.Exp(complex(0, -detPhase))
+	a := m[0] * factor // cos(beta/2) * e^{-i(alpha+gamma)/2}
+	b := m[1] * factor // -i*sin(beta/2) * e^{-i(alpha-gamma)/2}
+
+	beta = 2 * math.Acos(clamp(cmplx.Abs(a), 0, 1))
+
+	if cmplx.Abs(b) < 1e-10 {
+		alpha = -2 * cmplx.Phase(a)
+		beta = 0
+		gamma = 0
+	} else if cmplx.Abs(a) < 1e-10 {
+		// beta ≈ π: b = -i·sin(β/2)·e^{-i(α-γ)/2}, so i·b = sin(β/2)·e^{-i(α-γ)/2}.
+		alpha = -2 * cmplx.Phase(1i*b)
+		beta = math.Pi
+		gamma = 0
+	} else {
+		// a = cos(β/2) · e^{-i(α+γ)/2}  →  Phase(a) = -(α+γ)/2
+		// b = -i·sin(β/2) · e^{-i(α-γ)/2}, so i·b = sin(β/2)·e^{-i(α-γ)/2}
+		// Phase(i·b) = -(α-γ)/2
+		apg := cmplx.Phase(a)    // -(alpha+gamma)/2
+		amg := cmplx.Phase(1i*b) // -(alpha-gamma)/2
+		alpha = -(apg + amg)
+		gamma = -(apg - amg)
+	}
+
+	phase = detPhase
+	return
+}
+
+// eulerZXZ decomposes a 2×2 unitary into RZ·RX·RZ operations.
+func eulerZXZ(m []complex128, qubit int) []ir.Operation {
+	if IsIdentity(m, 2, 1e-10) {
+		return nil
+	}
+	alpha, beta, gamma, _ := EulerZXZ(m)
+
+	var ops []ir.Operation
+	if !nearZeroMod2Pi(gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(gamma)), Qubits: []int{qubit}})
+	}
+	if !nearZeroMod2Pi(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RX(normalizeAngle(beta)), Qubits: []int{qubit}})
+	}
+	if !nearZeroMod2Pi(alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(alpha)), Qubits: []int{qubit}})
+	}
+	if len(ops) == 0 {
+		return nil
+	}
+	return ops
+}
+
+// eulerZSX decomposes a 2×2 unitary into IBM-native {RZ, SX, X} operations.
+// Uses ZYZ angles then converts with special-case reductions:
+//
+//	Case 1: beta ≈ 0       → RZ(alpha+gamma)                           [1 gate]
+//	Case 2: beta ≈ π/2     → RZ(gamma-π/2), SX, RZ(alpha+π/2)         [3 gates]
+//	Case 3: beta ≈ π       → RZ(gamma-π), X, RZ(alpha)                 [3 gates]
+//	Case 4: general         → RZ(gamma), SX, RZ(beta+π), SX, RZ(alpha+π)  [5 gates]
+func eulerZSX(m []complex128, qubit int) []ir.Operation {
+	if IsIdentity(m, 2, 1e-10) {
+		return nil
+	}
+	alpha, beta, gamma, _ := EulerZYZ(m)
+
+	var ops []ir.Operation
+	addRZ := func(angle float64) {
+		a := normalizeAngle(angle)
+		if !nearZeroMod2Pi(a) {
+			ops = append(ops, ir.Operation{Gate: gate.RZ(a), Qubits: []int{qubit}})
+		}
+	}
+
+	switch {
+	case nearZeroMod2Pi(beta):
+		// Case 1: diagonal unitary → single RZ
+		addRZ(alpha + gamma)
+
+	case math.Abs(beta-math.Pi/2) < 1e-8:
+		// Case 2: beta ≈ π/2
+		addRZ(gamma - math.Pi/2)
+		ops = append(ops, ir.Operation{Gate: gate.SX, Qubits: []int{qubit}})
+		addRZ(alpha + math.Pi/2)
+
+	case math.Abs(beta-math.Pi) < 1e-8:
+		// Case 3: beta ≈ π → X-like rotation
+		addRZ(gamma - math.Pi)
+		ops = append(ops, ir.Operation{Gate: gate.X, Qubits: []int{qubit}})
+		addRZ(alpha)
+
+	default:
+		// Case 4: general → 5-gate decomposition
+		// U = RZ(alpha) · RY(beta) · RZ(gamma)
+		//   = RZ(alpha+π) · SX · RZ(beta+π) · SX · RZ(gamma)
+		// using identity: RY(β) = RZ(π/2)·RX(β)·RZ(-π/2)
+		//                       = RZ(π)·SX·RZ(β+π)·SX·RZ(0)
+		addRZ(gamma)
+		ops = append(ops, ir.Operation{Gate: gate.SX, Qubits: []int{qubit}})
+		addRZ(beta + math.Pi)
+		ops = append(ops, ir.Operation{Gate: gate.SX, Qubits: []int{qubit}})
+		addRZ(alpha + math.Pi)
+	}
+
+	if len(ops) == 0 {
+		return nil
+	}
+	return ops
 }

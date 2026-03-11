@@ -8,6 +8,46 @@ import (
 	"github.com/splch/qgo/circuit/ir"
 )
 
+// KAKForBasis decomposes an arbitrary 2-qubit unitary using the specified Euler convention
+// for single-qubit rotations. This avoids the need to re-decompose RY gates when targeting
+// bases like IBM's {RZ, SX, X}.
+func KAKForBasis(m []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	if basis == BasisZYZ {
+		return KAK(m, q0, q1)
+	}
+	if isGlobalPhaseOf(m, Eye(4), 1e-9) {
+		return nil
+	}
+	if isGlobalPhaseOf(m, gate.CNOT.Matrix(), 1e-9) {
+		return []ir.Operation{{Gate: gate.CNOT, Qubits: []int{q0, q1}}}
+	}
+	if isGlobalPhaseOf(m, gate.SWAP.Matrix(), 1e-9) {
+		return []ir.Operation{
+			{Gate: gate.CNOT, Qubits: []int{q0, q1}},
+			{Gate: gate.CNOT, Qubits: []int{q1, q0}},
+			{Gate: gate.CNOT, Qubits: []int{q0, q1}},
+		}
+	}
+	if isGlobalPhaseOf(m, gate.CZ.Matrix(), 1e-9) {
+		return []ir.Operation{
+			{Gate: gate.H, Qubits: []int{q1}},
+			{Gate: gate.CNOT, Qubits: []int{q0, q1}},
+			{Gate: gate.H, Qubits: []int{q1}},
+		}
+	}
+	if isGlobalPhaseOf(m, gate.CY.Matrix(), 1e-9) {
+		return []ir.Operation{
+			{Gate: gate.Sdg, Qubits: []int{q1}},
+			{Gate: gate.CNOT, Qubits: []int{q0, q1}},
+			{Gate: gate.S, Qubits: []int{q1}},
+		}
+	}
+	if ops := tryLocalDecomposeForBasis(m, q0, q1, basis); ops != nil {
+		return ops
+	}
+	return kakGeneralForBasis(m, q0, q1, basis)
+}
+
 // KAK decomposes an arbitrary 2-qubit unitary into at most 3 CNOTs + single-qubit rotations.
 func KAK(m []complex128, q0, q1 int) []ir.Operation {
 	if isGlobalPhaseOf(m, Eye(4), 1e-9) {
@@ -793,4 +833,127 @@ func det3x3(m []complex128) complex128 {
 	return m[0]*(m[4]*m[8]-m[5]*m[7]) -
 		m[1]*(m[3]*m[8]-m[5]*m[6]) +
 		m[2]*(m[3]*m[7]-m[4]*m[6])
+}
+
+// eulerFromMatrixForBasis decomposes a 2×2 unitary using the specified Euler convention.
+func eulerFromMatrixForBasis(m []complex128, q int, basis EulerBasis) []ir.Operation {
+	if IsIdentity(m, 2, 1e-10) {
+		return nil
+	}
+	switch basis {
+	case BasisZSX:
+		return eulerZSX(m, q)
+	case BasisZXZ:
+		return eulerZXZ(m, q)
+	default:
+		return eulerFromMatrix(m, q)
+	}
+}
+
+// tryLocalDecomposeForBasis checks if m ≈ A⊗B and decomposes with the given basis.
+func tryLocalDecomposeForBasis(m []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	a, b := factorKronecker(m)
+	prod := Tensor(a, 2, b, 2)
+	if isGlobalPhaseOf(prod, m, 1e-9) {
+		var ops []ir.Operation
+		ops = append(ops, eulerFromMatrixForBasis(a, q0, basis)...)
+		ops = append(ops, eulerFromMatrixForBasis(b, q1, basis)...)
+		if len(ops) == 0 {
+			return nil
+		}
+		return ops
+	}
+	return nil
+}
+
+// kakGeneralForBasis implements the full KAK decomposition using the specified Euler convention.
+func kakGeneralForBasis(m []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	k1l, k1r, k2l, k2r, x, y, z, nNonzero := KakParams(m)
+
+	if nNonzero == 0 {
+		var ops []ir.Operation
+		k := matMul2(k1l, k2l)
+		ops = append(ops, eulerFromMatrixForBasis(k, q0, basis)...)
+		k = matMul2(k1r, k2r)
+		ops = append(ops, eulerFromMatrixForBasis(k, q1, basis)...)
+		return ops
+	}
+	if nNonzero == 1 && isCNOTEquiv(x, y, z) {
+		return oneCNOTCircuitForBasis(k1l, k1r, k2l, k2r, q0, q1, basis)
+	}
+	if nNonzero == 1 {
+		return twoCNOTCircuitForBasis(x, y, z, k1l, k1r, k2l, k2r, q0, q1, basis)
+	}
+	return threeCNOTCircuitForBasis(x, y, z, k1l, k1r, k2l, k2r, q0, q1, basis)
+}
+
+func oneCNOTCircuitForBasis(k1l, k1r, k2l, k2r []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	Al := matMul2(k1l, _bK1lAdj)
+	Ar := matMul2(k1r, _bK1rAdj)
+	Bl := matMul2(_bK2lAdj, k2l)
+	Br := matMul2(_bK2rAdj, k2r)
+
+	var ops []ir.Operation
+	ops = append(ops, eulerFromMatrixForBasis(Bl, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(Br, q1, basis)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrixForBasis(Al, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(Ar, q1, basis)...)
+	return ops
+}
+
+func twoCNOTCircuitForBasis(x, y, z float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	const tol = 1e-8
+	xz := math.Abs(x) > tol
+	yz := math.Abs(y) > tol
+	zz := math.Abs(z) > tol
+
+	var udOps []ir.Operation
+	if zz {
+		udOps = zzCircuit(z, q0, q1)
+	} else if xz {
+		udOps = xxCircuit(x, q0, q1)
+	} else if yz {
+		udOps = yyCircuit(y, q0, q1)
+	}
+
+	udMat := opsToUnitary4(udOps, q0, q1)
+	udTarget := weylUnitary(x, y, z)
+	correction := MatMul(udTarget, MatAdj(udMat, 4), 4)
+	k1Full := Tensor(k1l, 2, k1r, 2)
+	afterMat := MatMul(k1Full, correction, 4)
+	al, ar := factorKronecker(afterMat)
+
+	var ops []ir.Operation
+	ops = append(ops, eulerFromMatrixForBasis(k2l, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(k2r, q1, basis)...)
+	ops = append(ops, udOps...)
+	ops = append(ops, eulerFromMatrixForBasis(al, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(ar, q1, basis)...)
+	return ops
+}
+
+func threeCNOTCircuitForBasis(a, b, c float64, k1l, k1r, k2l, k2r []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
+	U0l := matMul2(k1l, _u0l)
+	U0r := matMul2(k1r, _u0r)
+	U1l := _u1l
+	U1r := matMul2(_u1ra, matMul2(rzMat(-2*c), _u1rb))
+	U2l := matMul2(_u2la, matMul2(rzMat(-2*a), _u2lb))
+	U2r := matMul2(_u2ra, matMul2(rzMat(2*b), _u2rb))
+	U3l := matMul2(_u3l, k2l)
+	U3r := matMul2(_u3r, k2r)
+
+	var ops []ir.Operation
+	ops = append(ops, eulerFromMatrixForBasis(U3l, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(U3r, q1, basis)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrixForBasis(U2l, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(U2r, q1, basis)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrixForBasis(U1l, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(U1r, q1, basis)...)
+	ops = append(ops, ir.Operation{Gate: gate.CNOT, Qubits: []int{q0, q1}})
+	ops = append(ops, eulerFromMatrixForBasis(U0l, q0, basis)...)
+	ops = append(ops, eulerFromMatrixForBasis(U0r, q1, basis)...)
+	return ops
 }

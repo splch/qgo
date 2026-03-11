@@ -13,6 +13,7 @@ const maxDecomposeDepth = 3
 
 // DecomposeToTarget replaces non-basis gates with basis gate sequences.
 func DecomposeToTarget(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
+	eb := decompose.BasisForTarget(t.BasisGates)
 	var result []ir.Operation
 	for _, op := range c.Ops() {
 		if op.Gate == nil {
@@ -29,7 +30,7 @@ func DecomposeToTarget(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 			continue
 		}
 
-		decomposed, err := decomposeOp(op, t, 0)
+		decomposed, err := decomposeOp(op, t, 0, eb)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +41,7 @@ func DecomposeToTarget(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 }
 
 // decomposeOp decomposes a single operation to target basis gates, recursively.
-func decomposeOp(op ir.Operation, t target.Target, depth int) ([]ir.Operation, error) {
+func decomposeOp(op ir.Operation, t target.Target, depth int, eb decompose.EulerBasis) ([]ir.Operation, error) {
 	if depth > maxDecomposeDepth {
 		return nil, fmt.Errorf("decompose: max depth exceeded for gate %q on qubits %v",
 			op.Gate.Name(), op.Qubits)
@@ -54,14 +55,14 @@ func decomposeOp(op ir.Operation, t target.Target, depth int) ([]ir.Operation, e
 	// Try rule-based decomposition first.
 	ruleOps := decompose.DecomposeByRule(op.Gate, op.Qubits, t.BasisGates)
 	if ruleOps != nil {
-		return expandAndRecurse(ruleOps, t, depth)
+		return expandAndRecurse(ruleOps, t, depth, eb)
 	}
 
 	// Try Euler decomposition for single-qubit gates.
 	if op.Gate.Qubits() == 1 {
-		eulerOps := decompose.EulerDecompose(op.Gate, op.Qubits[0])
+		eulerOps := decompose.EulerDecomposeForBasis(op.Gate, op.Qubits[0], eb)
 		if eulerOps != nil {
-			return expandAndRecurse(eulerOps, t, depth)
+			return expandAndRecurse(eulerOps, t, depth, eb)
 		}
 		// Identity gate: no ops needed.
 		return nil, nil
@@ -69,9 +70,9 @@ func decomposeOp(op ir.Operation, t target.Target, depth int) ([]ir.Operation, e
 
 	// Try KAK for 2-qubit gates.
 	if op.Gate.Qubits() == 2 {
-		kakOps := decompose.KAK(op.Gate.Matrix(), op.Qubits[0], op.Qubits[1])
+		kakOps := decompose.KAKForBasis(op.Gate.Matrix(), op.Qubits[0], op.Qubits[1], eb)
 		if kakOps != nil {
-			return expandAndRecurse(kakOps, t, depth)
+			return expandAndRecurse(kakOps, t, depth, eb)
 		}
 	}
 
@@ -83,12 +84,12 @@ func decomposeOp(op ir.Operation, t target.Target, depth int) ([]ir.Operation, e
 			for _, a := range applied {
 				ops = append(ops, ir.Operation{Gate: a.Gate, Qubits: a.Qubits})
 			}
-			return expandAndRecurse(ops, t, depth)
+			return expandAndRecurse(ops, t, depth, eb)
 		}
 		// Try rule-based decomposition for 3-qubit gates to CX basis.
 		ruleOps := decompose.DecomposeByRule(op.Gate, op.Qubits, []string{"CX", "H", "T", "Tdg", "S", "Sdg", "RZ", "RY"})
 		if ruleOps != nil {
-			return expandAndRecurse(ruleOps, t, depth)
+			return expandAndRecurse(ruleOps, t, depth, eb)
 		}
 	}
 
@@ -97,7 +98,7 @@ func decomposeOp(op ir.Operation, t target.Target, depth int) ([]ir.Operation, e
 }
 
 // expandAndRecurse recursively decomposes ops that are still not in basis.
-func expandAndRecurse(ops []ir.Operation, t target.Target, depth int) ([]ir.Operation, error) {
+func expandAndRecurse(ops []ir.Operation, t target.Target, depth int, eb decompose.EulerBasis) ([]ir.Operation, error) {
 	var result []ir.Operation
 	for _, op := range ops {
 		if op.Gate == nil {
@@ -108,7 +109,7 @@ func expandAndRecurse(ops []ir.Operation, t target.Target, depth int) ([]ir.Oper
 		if t.HasBasisGate(bname) {
 			result = append(result, op)
 		} else {
-			sub, err := decomposeOp(op, t, depth+1)
+			sub, err := decomposeOp(op, t, depth+1, eb)
 			if err != nil {
 				return nil, err
 			}
