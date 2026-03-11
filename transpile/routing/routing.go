@@ -2,251 +2,169 @@ package routing
 
 import (
 	"math"
+	"math/rand/v2"
+	"runtime"
+	"sync"
 
-	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
 	"github.com/splch/qgo/transpile/target"
 )
 
+// Options configures the SABRE routing algorithm.
+type Options struct {
+	Trials              int     // number of random initial layouts to try (default 20)
+	BidirectionalIters  int     // forward+backward iterations per trial (default 4)
+	Seed                *uint64 // random seed; nil = non-deterministic
+	Parallelism         int     // max concurrent trials (default GOMAXPROCS)
+	DecayDelta          float64 // decay increment per SWAP (default 0.001)
+	ExtendedSetDepth    int     // BFS layers for lookahead (default 3)
+	ExtendedSetWeight   float64 // geometric weight for extended set layers (default 0.5)
+	ReleaseValveThreshold int   // SWAPs before release valve fires (default 10*numQubits, -1 disables)
+}
+
+func (o Options) withDefaults(numQubits int) Options {
+	if o.Trials <= 0 {
+		o.Trials = 20
+	}
+	if o.BidirectionalIters <= 0 {
+		o.BidirectionalIters = 4
+	}
+	if o.Parallelism <= 0 {
+		o.Parallelism = runtime.GOMAXPROCS(0)
+	}
+	if o.DecayDelta <= 0 {
+		o.DecayDelta = 0.001
+	}
+	if o.ExtendedSetDepth <= 0 {
+		o.ExtendedSetDepth = 3
+	}
+	if o.ExtendedSetWeight <= 0 {
+		o.ExtendedSetWeight = 0.5
+	}
+	if o.ReleaseValveThreshold == 0 {
+		o.ReleaseValveThreshold = 10 * numQubits
+	}
+	return o
+}
+
 // Route inserts SWAP gates to satisfy target connectivity constraints.
-// Uses the SABRE algorithm (Li et al., 2019).
+// Uses the SABRE algorithm with production defaults (20 trials, bidirectional iteration).
 // Returns the circuit unchanged for all-to-all targets.
 func Route(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
+	return RouteWithOptions(c, t, Options{})
+}
+
+// RouteWithOptions inserts SWAP gates using configurable SABRE parameters.
+func RouteWithOptions(c *ir.Circuit, t target.Target, opts Options) (*ir.Circuit, error) {
 	if t.Connectivity == nil {
 		return c, nil
 	}
 
 	dist := t.DistanceMatrix()
 	adj := t.AdjacencyMap()
-
-	// Forward pass.
-	fwdOps, fwdLayout := sabrePass(c, t, dist, adj, TrivialLayout(c.NumQubits()), false)
-
-	// Backward pass: reverse the circuit, use forward's final layout.
-	revOps, _ := sabrePass(c, t, dist, adj, fwdLayout, true)
-
-	// Use whichever produced fewer SWAPs.
-	fwdSwaps := countSwaps(fwdOps)
-	revSwaps := countSwaps(revOps)
-
-	var resultOps []ir.Operation
-	if revSwaps < fwdSwaps {
-		// Reverse revOps back to forward order.
-		for i, j := 0, len(revOps)-1; i < j; i, j = i+1, j-1 {
-			revOps[i], revOps[j] = revOps[j], revOps[i]
-		}
-		resultOps = revOps
-	} else {
-		resultOps = fwdOps
-	}
-
-	return ir.New(c.Name(), c.NumQubits(), c.NumClbits(), resultOps, c.Metadata()), nil
-}
-
-// sabrePass runs one direction of the SABRE algorithm.
-func sabrePass(c *ir.Circuit, t target.Target, dist [][]int, adj map[int][]int, initialLayout []int, reverse bool) ([]ir.Operation, []int) {
-	ops := c.Ops()
-	if reverse {
-		// Reverse the operation order.
-		rev := make([]ir.Operation, len(ops))
-		for i, op := range ops {
-			rev[len(ops)-1-i] = op
-		}
-		ops = rev
-	}
-
 	n := c.NumQubits()
-	layout := make([]int, n) // logical → physical
-	copy(layout, initialLayout)
-	inv := InverseLayout(layout) // physical → logical
+	ops := c.Ops()
 
-	// Build dependency tracking: for each op, count of unexecuted predecessors.
-	numOps := len(ops)
-	executed := make([]bool, numOps)
-
-	// Per-qubit: track which ops touch each qubit in order.
-	qubitOps := make([][]int, n)
-	for idx, op := range ops {
-		for _, q := range op.Qubits {
-			if q < n {
-				qubitOps[q] = append(qubitOps[q], idx)
-			}
-		}
-	}
-
-	// For each op, count predecessors (previous ops on same qubit).
-	predCount := make([]int, numOps)
-	for q := range n {
-		for k := 1; k < len(qubitOps[q]); k++ {
-			idx := qubitOps[q][k]
-			// Count all prior ops on this qubit as predecessors.
-			predCount[idx] += k
-		}
-	}
-
-	var result []ir.Operation
-
-	for {
-		// Build front layer: ops with all predecessors executed.
-		var front []int
-		for i := range numOps {
-			if !executed[i] && predCount[i] == 0 {
-				front = append(front, i)
-			}
-		}
-		if len(front) == 0 {
+	// Quick check: if no 2-qubit gates, just return as-is.
+	has2Q := false
+	for _, op := range ops {
+		if op.Gate != nil && op.Gate.Qubits() >= 2 {
+			has2Q = true
 			break
 		}
-
-		// Execute ops that are directly connected.
-		progress := false
-		for _, idx := range front {
-			op := ops[idx]
-			if op.Gate == nil || op.Gate.Qubits() <= 1 {
-				// Single-qubit or measurement: remap qubit and execute.
-				mappedOp := remapOp(op, layout)
-				result = append(result, mappedOp)
-				markExecuted(idx, ops, executed, predCount, qubitOps, n)
-				progress = true
-				continue
-			}
-
-			// Multi-qubit gate: check connectivity.
-			q0, q1 := op.Qubits[0], op.Qubits[1]
-			p0, p1 := layout[q0], layout[q1]
-			if p0 >= 0 && p0 < len(dist) && p1 >= 0 && p1 < len(dist) && dist[p0][p1] == 1 {
-				mappedOp := remapOp(op, layout)
-				result = append(result, mappedOp)
-				markExecuted(idx, ops, executed, predCount, qubitOps, n)
-				progress = true
-			}
-		}
-
-		if progress {
-			continue
-		}
-
-		// No directly executable ops: find best SWAP.
-		bestSwap := [2]int{-1, -1}
-		bestCost := math.Inf(1)
-
-		// Build lookahead layer (next ops after front).
-		var lookahead []int
-		for _, idx := range front {
-			op := ops[idx]
-			for _, q := range op.Qubits {
-				for _, nextIdx := range qubitOps[q] {
-					if nextIdx > idx && !executed[nextIdx] {
-						lookahead = append(lookahead, nextIdx)
-						break
-					}
-				}
-			}
-		}
-
-		// Evaluate candidate SWAPs on connected physical pairs.
-		for phys0, neighbors := range adj {
-			for _, phys1 := range neighbors {
-				if phys0 >= phys1 {
-					continue // avoid duplicates
-				}
-
-				// Simulate the SWAP.
-				log0, log1 := inv[phys0], inv[phys1]
-				// Temporarily swap.
-				layout[log0], layout[log1] = layout[log1], layout[log0]
-
-				cost := 0.0
-				for _, idx := range front {
-					op := ops[idx]
-					if op.Gate != nil && op.Gate.Qubits() >= 2 {
-						q0, q1 := op.Qubits[0], op.Qubits[1]
-						p0, p1 := layout[q0], layout[q1]
-						if p0 >= 0 && p0 < len(dist) && p1 >= 0 && p1 < len(dist) && dist[p0][p1] >= 0 {
-							cost += float64(dist[p0][p1])
-						}
-					}
-				}
-				for _, idx := range lookahead {
-					op := ops[idx]
-					if op.Gate != nil && op.Gate.Qubits() >= 2 {
-						q0, q1 := op.Qubits[0], op.Qubits[1]
-						p0, p1 := layout[q0], layout[q1]
-						if p0 >= 0 && p0 < len(dist) && p1 >= 0 && p1 < len(dist) && dist[p0][p1] >= 0 {
-							cost += 0.5 * float64(dist[p0][p1])
-						}
-					}
-				}
-
-				// Undo swap.
-				layout[log0], layout[log1] = layout[log1], layout[log0]
-
-				if cost < bestCost {
-					bestCost = cost
-					bestSwap = [2]int{phys0, phys1}
-				}
-			}
-		}
-
-		if bestSwap[0] < 0 {
-			// No valid SWAP found; skip remaining blocked ops.
-			break
-		}
-
-		// Insert SWAP.
-		result = append(result, ir.Operation{
-			Gate:   gate.SWAP,
-			Qubits: []int{bestSwap[0], bestSwap[1]},
-		})
-
-		// Update layout.
-		log0, log1 := inv[bestSwap[0]], inv[bestSwap[1]]
-		layout[log0], layout[log1] = layout[log1], layout[log0]
-		inv[bestSwap[0]], inv[bestSwap[1]] = inv[bestSwap[1]], inv[bestSwap[0]]
+	}
+	if !has2Q {
+		return c, nil
 	}
 
-	return result, layout
+	opts = opts.withDefaults(n)
+
+	// Determine RNG source for each trial.
+	var baseSeed uint64
+	if opts.Seed != nil {
+		baseSeed = *opts.Seed
+	} else {
+		// Use a random seed from the global source.
+		baseSeed = rand.Uint64()
+	}
+
+	type trialResult struct {
+		ops   []ir.Operation
+		swaps int
+	}
+
+	results := make([]trialResult, opts.Trials)
+
+	// Run trials in parallel with a semaphore.
+	sem := make(chan struct{}, opts.Parallelism)
+	var wg sync.WaitGroup
+
+	for trial := range opts.Trials {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(t int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			// Each trial gets a deterministic RNG derived from baseSeed + trial index.
+			rng := rand.New(rand.NewPCG(baseSeed+uint64(t), uint64(t)))
+
+			bestOps, bestSwaps := runTrial(ops, n, dist, adj, opts, rng)
+			results[t] = trialResult{ops: bestOps, swaps: bestSwaps}
+		}(trial)
+	}
+	wg.Wait()
+
+	// Pick the trial with fewest SWAPs.
+	bestIdx := 0
+	bestSwaps := math.MaxInt
+	for i, r := range results {
+		if r.swaps < bestSwaps {
+			bestSwaps = r.swaps
+			bestIdx = i
+		}
+	}
+
+	return ir.New(c.Name(), c.NumQubits(), c.NumClbits(), results[bestIdx].ops, c.Metadata()), nil
 }
 
-// markExecuted marks an operation as executed and updates predecessor counts.
-func markExecuted(idx int, ops []ir.Operation, executed []bool, predCount []int, qubitOps [][]int, n int) {
-	executed[idx] = true
-	op := ops[idx]
-	for _, q := range op.Qubits {
-		if q >= n {
-			continue
-		}
-		// Decrement predCount of subsequent ops on this qubit.
-		found := false
-		for _, nextIdx := range qubitOps[q] {
-			if nextIdx == idx {
-				found = true
-				continue
-			}
-			if found && !executed[nextIdx] {
-				predCount[nextIdx]--
-				break
-			}
-		}
-	}
-}
+// runTrial runs one full bidirectional SABRE trial.
+func runTrial(ops []ir.Operation, n int, dist [][]int, adj map[int][]int,
+	opts Options, rng *rand.Rand) ([]ir.Operation, int) {
 
-// remapOp remaps logical qubits to physical qubits using the layout.
-func remapOp(op ir.Operation, layout []int) ir.Operation {
-	mapped := ir.Operation{
-		Gate:      op.Gate,
-		Clbits:    op.Clbits,
-		Condition: op.Condition,
-	}
-	mapped.Qubits = make([]int, len(op.Qubits))
-	for i, q := range op.Qubits {
-		if q >= 0 && q < len(layout) {
-			mapped.Qubits[i] = layout[q]
-		} else {
-			mapped.Qubits[i] = q
+	layout := RandomLayout(n, rng)
+
+	var bestOps []ir.Operation
+	bestSwaps := math.MaxInt
+
+	for iter := range opts.BidirectionalIters {
+		_ = iter
+
+		// Forward pass.
+		fwdDAG := newDAG(ops, n, false)
+		fwdOps, fwdLayout, fwdSwaps := sabrePass(fwdDAG, dist, adj, layout, opts, rng)
+		if fwdSwaps < bestSwaps {
+			bestSwaps = fwdSwaps
+			bestOps = fwdOps
 		}
+
+		// Backward pass: use forward's final layout.
+		bwdDAG := newDAG(ops, n, true)
+		bwdOps, bwdLayout, bwdSwaps := sabrePass(bwdDAG, dist, adj, fwdLayout, opts, rng)
+		if bwdSwaps < bestSwaps {
+			bestSwaps = bwdSwaps
+			// Reverse backward ops to get forward order.
+			for i, j := 0, len(bwdOps)-1; i < j; i, j = i+1, j-1 {
+				bwdOps[i], bwdOps[j] = bwdOps[j], bwdOps[i]
+			}
+			bestOps = bwdOps
+		}
+
+		// Use backward's final layout for next iteration (layout convergence).
+		layout = bwdLayout
 	}
-	return mapped
+
+	return bestOps, bestSwaps
 }
 
 // countSwaps counts SWAP gates in an operation list.
