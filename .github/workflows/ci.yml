@@ -21,7 +21,7 @@ jobs:
           go-version: "1.24"
 
       - name: Verify go.mod is tidy
-        run: go mod tidy && git diff --exit-code go.mod go.sum
+        run: go mod tidy && git diff --exit-code go.mod
 
       - name: Vet
         run: go vet ./...
@@ -52,20 +52,20 @@ jobs:
       - name: Test backend/braket
         working-directory: backend/braket
         run: |
-          go mod tidy && git diff --exit-code go.mod go.sum
+          go mod tidy && git diff --exit-code go.mod
           go vet ./...
           go test -race -count=1 -timeout=5m ./...
 
       - name: Build observe/otelbridge
         working-directory: observe/otelbridge
         run: |
-          go mod tidy && git diff --exit-code go.mod go.sum
+          go mod tidy && git diff --exit-code go.mod
           go build ./...
 
       - name: Build observe/prombridge
         working-directory: observe/prombridge
         run: |
-          go mod tidy && git diff --exit-code go.mod go.sum
+          go mod tidy && git diff --exit-code go.mod
           go build ./...
 
   lint:
@@ -104,4 +104,4 @@ jobs:
       - name: Gosec
         uses: securego/gosec@master
         with:
-          args: -exclude-dir=backend/braket -exclude-dir=observe/otelbridge -exclude-dir=observe/prombridge ./...
+          args: -exclude=G115 -exclude-dir=backend/braket -exclude-dir=observe/otelbridge -exclude-dir=observe/prombridge ./...

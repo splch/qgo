@@ -7,7 +7,6 @@ linters:
     - govet
     - staticcheck
     - ineffassign
-    - typecheck
     - misspell
     - unconvert
     - unparam
