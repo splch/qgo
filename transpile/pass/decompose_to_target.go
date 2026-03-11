@@ -9,6 +9,8 @@ import (
 	"github.com/splch/qgo/transpile/target"
 )
 
+// maxDecomposeDepth limits recursive decomposition to prevent infinite loops.
+// Depth 3 handles all known gate chains (e.g. CCX → CX+1Q → basis).
 const maxDecomposeDepth = 3
 
 // DecomposeToTarget replaces non-basis gates with basis gate sequences.

@@ -18,19 +18,19 @@ func ParallelizeOps(c *ir.Circuit, _ target.Target) (*ir.Circuit, error) {
 
 	// Compute the earliest layer each op can be placed in.
 	layers := make([]int, len(ops))
-	qubitReady := make([]int, n) // earliest available layer per qubit
+	qubitNextLayer := make([]int, n) // earliest available layer per qubit
 
 	for i, op := range ops {
 		earliest := 0
 		for _, q := range op.Qubits {
-			if q < n && qubitReady[q] > earliest {
-				earliest = qubitReady[q]
+			if q < n && qubitNextLayer[q] > earliest {
+				earliest = qubitNextLayer[q]
 			}
 		}
 		layers[i] = earliest
 		for _, q := range op.Qubits {
 			if q < n {
-				qubitReady[q] = earliest + 1
+				qubitNextLayer[q] = earliest + 1
 			}
 		}
 	}

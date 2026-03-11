@@ -3,10 +3,10 @@ package draw
 import (
 	"fmt"
 	"io"
-	"math"
 	"strings"
 
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/piformat"
 )
 
 // Option configures diagram rendering.
@@ -28,6 +28,12 @@ func WithMaxLabelWidth(n int) Option {
 			c.maxLabelWidth = n
 		}
 	}
+}
+
+// placement maps an operation to its assigned column.
+type placement struct {
+	op  ir.Operation
+	col int
 }
 
 // String returns a text diagram of the circuit.
@@ -55,10 +61,6 @@ func Fprint(w io.Writer, c *ir.Circuit, opts ...Option) error {
 	}
 
 	// Step 1: assign each op to a column.
-	type placement struct {
-		op  ir.Operation
-		col int
-	}
 	placements, numCols := assignColumns(ops, nq)
 
 	// Step 2: build a grid of cell labels. grid[qubit][col].
@@ -201,15 +203,8 @@ func writeEmpty(w io.Writer, nq int) error {
 
 // assignColumns assigns each operation to a column index using greedy scheduling.
 // It tracks the qubit range (including intermediate qubits for multi-qubit gates).
-func assignColumns(ops []ir.Operation, nq int) ([]struct {
-	op  ir.Operation
-	col int
-}, int) {
+func assignColumns(ops []ir.Operation, nq int) ([]placement, int) {
 	nextFree := make([]int, nq)
-	type placement struct {
-		op  ir.Operation
-		col int
-	}
 	var placements []placement
 	numCols := 0
 
@@ -250,16 +245,7 @@ func assignColumns(ops []ir.Operation, nq int) ([]struct {
 		}
 	}
 
-	// Convert to the anonymous struct type used by Fprint.
-	result := make([]struct {
-		op  ir.Operation
-		col int
-	}, len(placements))
-	for i, p := range placements {
-		result[i].op = p.op
-		result[i].col = p.col
-	}
-	return result, numCols
+	return placements, numCols
 }
 
 // gateLabels returns the display label for each qubit of the operation.
@@ -357,38 +343,10 @@ func formatGateWithParams(baseName string, params []float64, cfg *config) string
 	}
 	pstrs := make([]string, len(params))
 	for i, p := range params {
-		pstrs[i] = formatAngle(p)
+		pstrs[i] = piformat.FormatASCII(p)
 	}
 	label := baseName + "(" + strings.Join(pstrs, ",") + ")"
 	return truncate(label, cfg.maxLabelWidth)
-}
-
-// formatAngle formats an angle using pi fractions when possible.
-func formatAngle(v float64) string {
-	ratio := v / math.Pi
-	if math.Abs(ratio-1) < 1e-10 {
-		return "pi"
-	}
-	if math.Abs(ratio+1) < 1e-10 {
-		return "-pi"
-	}
-	if math.Abs(v) < 1e-10 {
-		return "0"
-	}
-	for denom := 2; denom <= 16; denom++ {
-		num := ratio * float64(denom)
-		if math.Abs(num-math.Round(num)) < 1e-10 {
-			n := int(math.Round(num))
-			if n == 1 {
-				return fmt.Sprintf("pi/%d", denom)
-			}
-			if n == -1 {
-				return fmt.Sprintf("-pi/%d", denom)
-			}
-			return fmt.Sprintf("%d*pi/%d", n, denom)
-		}
-	}
-	return fmt.Sprintf("%.4g", v)
 }
 
 // truncate truncates a string to maxLen, adding ".." if truncated.

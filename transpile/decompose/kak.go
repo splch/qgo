@@ -6,11 +6,12 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 )
 
-// KAKForBasis decomposes an arbitrary 2-qubit unitary using the specified Euler convention
-// for single-qubit rotations. This avoids the need to re-decompose RY gates when targeting
-// bases like IBM's {RZ, SX, X}.
+// KAKForBasis decomposes an arbitrary 2-qubit unitary using the KAK (Cartan)
+// decomposition with the specified Euler convention for single-qubit rotations.
+// Reference: Tucci, arXiv:quant-ph/0507171; Vatan-Williams, arXiv:quant-ph/0308006.
 func KAKForBasis(m []complex128, q0, q1 int, basis EulerBasis) []ir.Operation {
 	if basis == BasisZYZ {
 		return KAK(m, q0, q1)
@@ -99,9 +100,10 @@ func tryLocalDecompose(m []complex128, q0, q1 int) []ir.Operation {
 	return nil
 }
 
-// KakParams extracts the KAK decomposition parameters from a 4x4 unitary
-// without building a circuit. Returns the four 2x2 K-matrices, the Weyl
-// parameters (x,y,z), and the count of nonzero Weyl parameters.
+// KakParams extracts the KAK decomposition parameters from a 4×4 unitary:
+//   U = (K1l⊗K1r) · exp(i(x·XX + y·YY + z·ZZ)) · (K2l⊗K2r)
+// Returns the four 2×2 K-matrices, the Weyl parameters (x,y,z), and the
+// count of nonzero Weyl parameters.
 func KakParams(m []complex128) (k1l, k1r, k2l, k2r []complex128, x, y, z float64, nNonzero int) {
 	// 1. Normalize to SU(4).
 	det := det4x4(m)
@@ -587,14 +589,14 @@ func eulerFromMatrix(m []complex128, q int) []ir.Operation {
 	}
 	alpha, beta, gamma, _ := EulerZYZ(m)
 	var ops []ir.Operation
-	if !nearZeroMod2Pi(gamma) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(gamma)), Qubits: []int{q}})
+	if !mathutil.NearZeroMod2Pi(gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(mathutil.NormalizeAngle(gamma)), Qubits: []int{q}})
 	}
-	if !nearZeroMod2Pi(beta) {
-		ops = append(ops, ir.Operation{Gate: gate.RY(normalizeAngle(beta)), Qubits: []int{q}})
+	if !mathutil.NearZeroMod2Pi(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RY(mathutil.NormalizeAngle(beta)), Qubits: []int{q}})
 	}
-	if !nearZeroMod2Pi(alpha) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(alpha)), Qubits: []int{q}})
+	if !mathutil.NearZeroMod2Pi(alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(mathutil.NormalizeAngle(alpha)), Qubits: []int{q}})
 	}
 	return ops
 }

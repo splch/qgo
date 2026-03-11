@@ -168,7 +168,8 @@ func runParallel(ctx context.Context, c *ir.Circuit, t target.Target, hooks *obs
 }
 
 // DefaultCost scores a circuit: lower is better.
-// Weights: 10·TwoQubitGates + Depth + 0.1·GateCount.
+// Two-qubit gates dominate error budget (10× weight), depth determines execution
+// time (1×), and total gate count is a minor tiebreaker (0.1×).
 func DefaultCost(c *ir.Circuit) float64 {
 	s := c.Stats()
 	return 10*float64(s.TwoQubitGates) + float64(s.Depth) + 0.1*float64(s.GateCount)

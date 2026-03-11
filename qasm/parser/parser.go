@@ -44,6 +44,12 @@ func ParseString(source string, opts ...Option) (*ir.Circuit, error) {
 	return p.parseProgram()
 }
 
+// register tracks a named qubit or classical register's offset and size.
+type register struct {
+	start int
+	size  int
+}
+
 type parser struct {
 	tokens []token.Token
 	pos    int
@@ -56,9 +62,9 @@ type parser struct {
 	ops       []ir.Operation
 	metadata  map[string]string
 
-	// Named registers: name → (start index, size).
-	qregs map[string][2]int
-	cregs map[string][2]int
+	// Named registers: name → register.
+	qregs map[string]register
+	cregs map[string]register
 
 	// Gate definitions: name → gatedef.
 	gates map[string]*gatedef
@@ -97,8 +103,8 @@ func (p *parser) expect(typ token.Type) (token.Token, error) {
 }
 
 func (p *parser) parseProgram() (*ir.Circuit, error) {
-	p.qregs = make(map[string][2]int)
-	p.cregs = make(map[string][2]int)
+	p.qregs = make(map[string]register)
+	p.cregs = make(map[string]register)
 	p.metadata = make(map[string]string)
 
 	// Optional version header.
@@ -204,7 +210,7 @@ func (p *parser) parseQubitDecl() error {
 	if err != nil {
 		return err
 	}
-	p.qregs[name.Literal] = [2]int{p.numQubits, size}
+	p.qregs[name.Literal] = register{start: p.numQubits, size: size}
 	p.numQubits += size
 	return nil
 }
@@ -227,7 +233,7 @@ func (p *parser) parseBitDecl() error {
 	if err != nil {
 		return err
 	}
-	p.cregs[name.Literal] = [2]int{p.numClbits, size}
+	p.cregs[name.Literal] = register{start: p.numClbits, size: size}
 	p.numClbits += size
 	return nil
 }
@@ -246,7 +252,7 @@ func (p *parser) parseQregDecl() error {
 	if err != nil {
 		return err
 	}
-	p.qregs[name.Literal] = [2]int{p.numQubits, size}
+	p.qregs[name.Literal] = register{start: p.numQubits, size: size}
 	p.numQubits += size
 	return nil
 }
@@ -265,7 +271,7 @@ func (p *parser) parseCregDecl() error {
 	if err != nil {
 		return err
 	}
-	p.cregs[name.Literal] = [2]int{p.numClbits, size}
+	p.cregs[name.Literal] = register{start: p.numClbits, size: size}
 	p.numClbits += size
 	return nil
 }
@@ -761,7 +767,7 @@ func (p *parser) parseSingleQubitArg() ([]int, error) {
 	if !ok {
 		return nil, fmt.Errorf("line %d:%d: undefined qubit register %q", name.Line, name.Col, name.Literal)
 	}
-	start, size := reg[0], reg[1]
+	start, size := reg.start, reg.size
 
 	if p.peek() == token.LBRACKET {
 		p.advance() // consume [
@@ -813,7 +819,7 @@ func (p *parser) parseSingleClbitArg() ([]int, error) {
 	if !ok {
 		return nil, fmt.Errorf("line %d:%d: undefined classical register %q", name.Line, name.Col, name.Literal)
 	}
-	start, size := reg[0], reg[1]
+	start, size := reg.start, reg.size
 
 	if p.peek() == token.LBRACKET {
 		p.advance()

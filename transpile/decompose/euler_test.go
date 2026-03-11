@@ -7,6 +7,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 )
 
 // rzMatrix returns the 2x2 RZ(theta) matrix as flat row-major []complex128.
@@ -108,7 +109,7 @@ func TestEulerZYZ_PhaseReturned(t *testing.T) {
 func TestEulerZYZ_IdentityAngles(t *testing.T) {
 	// Identity should give alpha=0, beta=0, gamma=0 (or equivalent mod 2pi).
 	alpha, beta, gamma, _ := EulerZYZ(gate.I.Matrix())
-	if !nearZeroMod2Pi(alpha) || !nearZeroMod2Pi(beta) || !nearZeroMod2Pi(gamma) {
+	if !mathutil.NearZeroMod2Pi(alpha) || !mathutil.NearZeroMod2Pi(beta) || !mathutil.NearZeroMod2Pi(gamma) {
 		t.Errorf("EulerZYZ(I): expected all angles near zero mod 2pi, got alpha=%.6f beta=%.6f gamma=%.6f",
 			alpha, beta, gamma)
 	}

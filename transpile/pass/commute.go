@@ -3,6 +3,7 @@ package pass
 import (
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 	"github.com/splch/qgo/transpile/target"
 )
 
@@ -62,7 +63,7 @@ func commutesWithControl(g gate.Gate) bool {
 	case gate.Z, gate.S, gate.Sdg, gate.T, gate.Tdg:
 		return true
 	}
-	name := baseName(g)
+	name := mathutil.StripParams(g.Name())
 	return name == "RZ" || name == "P"
 }
 
@@ -72,6 +73,6 @@ func commutesWithTarget(g gate.Gate) bool {
 	case gate.X:
 		return true
 	}
-	name := baseName(g)
+	name := mathutil.StripParams(g.Name())
 	return name == "RX"
 }

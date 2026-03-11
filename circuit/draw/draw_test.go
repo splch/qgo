@@ -250,24 +250,3 @@ func TestTenQubits(t *testing.T) {
 	}
 }
 
-func TestFormatAngle(t *testing.T) {
-	tests := []struct {
-		v    float64
-		want string
-	}{
-		{math.Pi, "pi"},
-		{-math.Pi, "-pi"},
-		{math.Pi / 2, "pi/2"},
-		{math.Pi / 4, "pi/4"},
-		{-math.Pi / 4, "-pi/4"},
-		{3 * math.Pi / 4, "3*pi/4"},
-		{0, "0"},
-		{1.234, "1.234"},
-	}
-	for _, tt := range tests {
-		got := formatAngle(tt.v)
-		if got != tt.want {
-			t.Errorf("formatAngle(%v) = %q, want %q", tt.v, got, tt.want)
-		}
-	}
-}

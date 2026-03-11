@@ -83,6 +83,8 @@ func (s *Sim) Evolve(c *ir.Circuit) error {
 
 // applyGate1 applies a single-qubit gate using the stride pattern.
 func (s *Sim) applyGate1(qubit int, m []complex128) {
+	// At 17+ qubits the state vector has 131K+ entries; goroutine fan-out
+	// overhead is amortized by the per-block work.
 	if s.numQubits >= 17 {
 		s.applyGate1Parallel(qubit, m)
 		return

@@ -110,22 +110,3 @@ func TestMergeParams(t *testing.T) {
 	}
 }
 
-func TestFormatAngle(t *testing.T) {
-	tests := []struct {
-		v    float64
-		want string
-	}{
-		{math.Pi, "π"},
-		{-math.Pi, "-π"},
-		{math.Pi / 2, "π/2"},
-		{math.Pi / 4, "π/4"},
-		{3 * math.Pi / 4, "3*π/4"},
-		{0.123, "0.123"},
-	}
-	for _, tt := range tests {
-		got := formatAngle(tt.v)
-		if got != tt.want {
-			t.Errorf("formatAngle(%v) = %q, want %q", tt.v, got, tt.want)
-		}
-	}
-}

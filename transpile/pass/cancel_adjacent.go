@@ -5,15 +5,17 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 	"github.com/splch/qgo/transpile/analysis"
 	"github.com/splch/qgo/transpile/target"
 )
 
 // CancelAdjacent cancels adjacent inverse gate pairs on the same qubits.
-// Iterates to fixpoint.
+// Iterates to fixpoint (bounded to prevent pathological cases).
 func CancelAdjacent(c *ir.Circuit, _ target.Target) (*ir.Circuit, error) {
 	ops := c.Ops()
-	for {
+	const maxIter = 100
+	for range maxIter {
 		cancelled := false
 		ops, cancelled = cancelOnce(ops, c.NumQubits(), c.NumClbits())
 		if !cancelled {
@@ -130,8 +132,8 @@ func areInverse(a, b gate.Gate) bool {
 	// Parameterized: same base name with negated parameters.
 	pa, pb := a.Params(), b.Params()
 	if pa != nil && pb != nil && len(pa) == len(pb) {
-		nameA := baseName(a)
-		nameB := baseName(b)
+		nameA := mathutil.StripParams(a.Name())
+		nameB := mathutil.StripParams(b.Name())
 		if nameA == nameB {
 			allNeg := true
 			for k := range pa {
@@ -161,13 +163,3 @@ func sameQubits(a, b []int) bool {
 	return true
 }
 
-// baseName extracts the gate name without parameters.
-func baseName(g gate.Gate) string {
-	name := g.Name()
-	for i := range len(name) {
-		if name[i] == '(' {
-			return name[:i]
-		}
-	}
-	return name
-}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 )
 
 // DecomposeByRule returns a basis-gate decomposition for known gates.
@@ -89,7 +90,7 @@ func decompose1qToCXBasis(g gate.Gate, qubits []int, basis map[string]bool) []ir
 		return nil
 	}
 
-	name := baseName(g)
+	name := mathutil.StripParamsAndDagger(g.Name())
 	switch name {
 	case "RX":
 		// RX(θ) = H·RZ(θ)·H = RZ(π/2)·SX·RZ(θ+π)·SX·RZ(π/2)
@@ -168,7 +169,7 @@ func decompose2qToCX(g gate.Gate, qubits []int) []ir.Operation {
 	if params == nil {
 		return nil
 	}
-	name := baseName(g)
+	name := mathutil.StripParamsAndDagger(g.Name())
 	switch name {
 	case "CP":
 		// CP(φ) = RZ(φ/2)(q0)·CX(q0,q1)·RZ(-φ/2)(q1)·CX(q0,q1)·RZ(φ/2)(q1)
@@ -307,11 +308,11 @@ func euler1qToIonQ(g gate.Gate, q int) []ir.Operation {
 	var ops []ir.Operation
 
 	// RZ(γ) → virtual Z rotation: GPI(γ/2)·GPI(0)
-	if !nearZeroMod2Pi(gamma) {
+	if !mathutil.NearZeroMod2Pi(gamma) {
 		ops = append(ops, rzToIonQ(gamma, q)...)
 	}
 	// RY(β) → GPI2(π/2)·RZ(β)·GPI2(-π/2) → GPI2(π/2)·GPI(β/2)·GPI(0)·GPI2(-π/2)
-	if !nearZeroMod2Pi(beta) {
+	if !mathutil.NearZeroMod2Pi(beta) {
 		ops = append(ops,
 			ir.Operation{Gate: gate.GPI2(0), Qubits: []int{q}},
 		)
@@ -321,7 +322,7 @@ func euler1qToIonQ(g gate.Gate, q int) []ir.Operation {
 		)
 	}
 	// RZ(α)
-	if !nearZeroMod2Pi(alpha) {
+	if !mathutil.NearZeroMod2Pi(alpha) {
 		ops = append(ops, rzToIonQ(alpha, q)...)
 	}
 	return ops
@@ -403,7 +404,7 @@ func expandOpsToIonQ(ops []ir.Operation) []ir.Operation {
 		}
 		name := op.Gate.Name()
 		// Check if already IonQ native.
-		bn := baseName(op.Gate)
+		bn := mathutil.StripParamsAndDagger(op.Gate.Name())
 		if ionqBasis[bn] {
 			result = append(result, op)
 			continue
@@ -426,22 +427,3 @@ func expandOpsToIonQ(ops []ir.Operation) []ir.Operation {
 	return result
 }
 
-// baseName returns the base name of a gate without parameters or dagger.
-func baseName(g gate.Gate) string {
-	name := g.Name()
-	// Strip "†" suffix.
-	for i := range len(name) {
-		if name[i] >= 0x80 { // start of multi-byte UTF-8
-			name = name[:i]
-			break
-		}
-	}
-	// Strip parenthetical parameters.
-	for i := range len(name) {
-		if name[i] == '(' {
-			name = name[:i]
-			break
-		}
-	}
-	return name
-}

@@ -257,7 +257,7 @@ func (m *Manager) pollUntilDone(ctx context.Context, b backend.Backend, jobID, b
 		attempt++
 		status, err := b.Status(ctx, jobID)
 		if err != nil {
-			return fmt.Errorf("manager: poll %s: %w", jobID, err)
+			return fmt.Errorf("manager: poll %s on %s: %w", jobID, backendName, err)
 		}
 
 		if hooks != nil && hooks.OnJobPoll != nil {
@@ -281,9 +281,9 @@ func (m *Manager) pollUntilDone(ctx context.Context, b backend.Backend, jobID, b
 		case backend.StateCompleted:
 			return nil
 		case backend.StateFailed:
-			return fmt.Errorf("manager: job %s failed: %s", jobID, status.Error)
+			return fmt.Errorf("manager: job %s on %s failed: %s", jobID, backendName, status.Error)
 		case backend.StateCancelled:
-			return fmt.Errorf("manager: job %s was cancelled", jobID)
+			return fmt.Errorf("manager: job %s on %s was cancelled", jobID, backendName)
 		}
 
 		select {

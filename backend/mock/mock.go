@@ -168,6 +168,8 @@ func (b *Backend) sleep(ctx context.Context) error {
 
 func generateID() string {
 	buf := make([]byte, 16)
-	_, _ = rand.Read(buf)
+	if _, err := rand.Read(buf); err != nil {
+		panic("mock: crypto/rand failed: " + err.Error())
+	}
 	return hex.EncodeToString(buf)
 }

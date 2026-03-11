@@ -166,8 +166,7 @@ go test -bench=. ./sim/statevector/
 
 ## Documentation
 
-- [API Reference (pkg.go.dev)](https://pkg.go.dev/github.com/splch/qgo)
-- [Feature Matrix](docs/feature-matrix.md) &mdash; comparison with Qiskit, Cirq, and PennyLane
+[API Reference (pkg.go.dev)](https://pkg.go.dev/github.com/splch/qgo)
 
 ## License
 

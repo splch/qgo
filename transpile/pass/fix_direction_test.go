@@ -6,6 +6,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 	"github.com/splch/qgo/transpile/target"
 )
 
@@ -140,7 +141,7 @@ func TestFixDirectionCPReverse(t *testing.T) {
 	if len(rops) != 1 {
 		t.Fatalf("expected 1 op for CP swap, got %d", len(rops))
 	}
-	if baseName(rops[0].Gate) != "CP" {
+	if mathutil.StripParams(rops[0].Gate.Name()) != "CP" {
 		t.Errorf("expected CP, got %s", rops[0].Gate.Name())
 	}
 	if rops[0].Qubits[0] != 0 || rops[0].Qubits[1] != 1 {

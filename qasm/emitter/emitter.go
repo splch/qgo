@@ -4,10 +4,10 @@ package emitter
 import (
 	"fmt"
 	"io"
-	"math"
 	"strings"
 
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/piformat"
 )
 
 // Option configures emitter behavior.
@@ -128,7 +128,7 @@ func (e *emitter) emitOp(op ir.Operation) error {
 	if len(params) > 0 {
 		pstrs := make([]string, len(params))
 		for i, p := range params {
-			pstrs[i] = formatParam(p)
+			pstrs[i] = piformat.FormatQASM(p)
 		}
 		e.writef("%s(%s) %s;\n", gateName, strings.Join(pstrs, ", "), strings.Join(qargs, ", "))
 	} else {
@@ -206,28 +206,3 @@ func qasmGateName(name string) string {
 	return strings.ToLower(name)
 }
 
-func formatParam(v float64) string {
-	// Try to express as a multiple of pi for readability.
-	ratio := v / math.Pi
-	if math.Abs(ratio-1) < 1e-10 {
-		return "pi"
-	}
-	if math.Abs(ratio+1) < 1e-10 {
-		return "-pi"
-	}
-	// Check if ratio is a simple fraction of pi.
-	for denom := 2; denom <= 16; denom++ {
-		num := ratio * float64(denom)
-		if math.Abs(num-math.Round(num)) < 1e-10 {
-			n := int(math.Round(num))
-			if n == 1 {
-				return fmt.Sprintf("pi/%d", denom)
-			}
-			if n == -1 {
-				return fmt.Sprintf("-pi/%d", denom)
-			}
-			return fmt.Sprintf("%d*pi/%d", n, denom)
-		}
-	}
-	return fmt.Sprintf("%.10g", v)
-}

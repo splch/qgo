@@ -1,20 +1,22 @@
 package pass
 
 import (
-	"math"
 	"strings"
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 	"github.com/splch/qgo/transpile/analysis"
 	"github.com/splch/qgo/transpile/target"
 )
 
 // MergeRotations merges consecutive same-axis rotations on the same qubit.
 // RZ(a)·RZ(b) → RZ(a+b), etc. Removes gates where merged angle ≈ 0 mod 2π.
+// Iterates to fixpoint (bounded to prevent pathological cases).
 func MergeRotations(c *ir.Circuit, _ target.Target) (*ir.Circuit, error) {
 	ops := c.Ops()
-	for {
+	const maxIter = 100
+	for range maxIter {
 		merged := false
 		ops, merged = mergeOnce(ops, c.NumQubits(), c.NumClbits())
 		if !merged {
@@ -72,9 +74,9 @@ func mergeOnce(ops []ir.Operation, numQubits, numClbits int) ([]ir.Operation, bo
 
 		// Merge: sum angles.
 		angle := op.Gate.Params()[0] + next.Gate.Params()[0]
-		angle = normalizeAngle(angle)
+		angle = mathutil.NormalizeAngle(angle)
 
-		if nearZeroMod2Pi(angle) {
+		if mathutil.NearZeroMod2Pi(angle) {
 			// Both cancel out.
 			removed[i] = true
 			removed[j] = true
@@ -128,20 +130,3 @@ func rotationAxis(g gate.Gate) string {
 	return ""
 }
 
-func normalizeAngle(angle float64) float64 {
-	a := math.Mod(angle, 2*math.Pi)
-	if a > math.Pi {
-		a -= 2 * math.Pi
-	} else if a <= -math.Pi {
-		a += 2 * math.Pi
-	}
-	return a
-}
-
-func nearZeroMod2Pi(angle float64) bool {
-	a := math.Mod(angle, 2*math.Pi)
-	if a < 0 {
-		a += 2 * math.Pi
-	}
-	return a < 1e-10 || (2*math.Pi-a) < 1e-10
-}

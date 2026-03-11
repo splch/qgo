@@ -5,6 +5,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 	"github.com/splch/qgo/transpile/target"
 )
 
@@ -37,7 +38,7 @@ func FixDirection(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 		}
 
 		// Gate-specific reversal.
-		bname := baseName(op.Gate)
+		bname := mathutil.StripParams(op.Gate.Name())
 		switch bname {
 		case "CZ", "SWAP":
 			// Symmetric gates: just swap operands.

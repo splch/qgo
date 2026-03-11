@@ -10,7 +10,8 @@ import (
 )
 
 // parallelThreshold is the minimum number of qubits before enabling parallel kernels.
-// At 9 qubits, dim=512, dim^2=262144 elements.
+// At 9 qubits dim=512 and the density matrix has 262K elements; the heavier
+// per-element work (row + column passes) justifies a lower threshold than statevector.
 const parallelThreshold = 9
 
 // Sim simulates a circuit via density matrix evolution.

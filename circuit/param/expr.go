@@ -2,7 +2,8 @@ package param
 
 import (
 	"fmt"
-	"math"
+
+	"github.com/splch/qgo/internal/piformat"
 )
 
 // Expr represents a symbolic expression over parameters.
@@ -50,7 +51,7 @@ func (l *literal) Parameters() []*Parameter                    { return nil }
 func (l *literal) IsNumeric() bool                             { return true }
 
 func (l *literal) String() string {
-	return formatAngle(l.v)
+	return piformat.FormatUnicode(l.v)
 }
 
 // --- paramRef ---
@@ -152,26 +153,3 @@ func mergeParams(a, b []*Parameter) []*Parameter {
 	return result
 }
 
-func formatAngle(v float64) string {
-	ratio := v / math.Pi
-	if math.Abs(ratio-1) < 1e-10 {
-		return "π"
-	}
-	if math.Abs(ratio+1) < 1e-10 {
-		return "-π"
-	}
-	for denom := 2; denom <= 16; denom++ {
-		num := ratio * float64(denom)
-		if math.Abs(num-math.Round(num)) < 1e-10 {
-			n := int(math.Round(num))
-			if n == 1 {
-				return fmt.Sprintf("π/%d", denom)
-			}
-			if n == -1 {
-				return fmt.Sprintf("-π/%d", denom)
-			}
-			return fmt.Sprintf("%d*π/%d", n, denom)
-		}
-	}
-	return fmt.Sprintf("%.4g", v)
-}

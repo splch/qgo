@@ -77,7 +77,8 @@ func (b *Builder) Apply(g gate.Gate, qubits ...int) *Builder {
 	if b.err != nil {
 		return b
 	}
-	// Check for duplicate qubit indices.
+	// Check for duplicate qubit indices. O(n²) is intentional: quantum gates
+	// have 1–3 qubits, making nested loops faster than allocating a map.
 	for i := 0; i < len(qubits); i++ {
 		for j := i + 1; j < len(qubits); j++ {
 			if qubits[i] == qubits[j] {

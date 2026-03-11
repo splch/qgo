@@ -17,8 +17,8 @@ func (c *channel) Qubits() int           { return c.nq }
 func (c *channel) Kraus() [][]complex128 { return c.kraus }
 
 // Depolarizing1Q returns a single-qubit depolarizing channel.
-// With probability p, the qubit is replaced by a random Pauli.
-// Kraus: sqrt(1-p)I, sqrt(p/3)X, sqrt(p/3)Y, sqrt(p/3)Z
+// Kraus operators: sqrt(1-p)·I, sqrt(p/3)·X, sqrt(p/3)·Y, sqrt(p/3)·Z.
+// The qubit is maximally mixed at p=3/4 (not p=1).
 func Depolarizing1Q(p float64) Channel {
 	if p < 0 || p > 1 {
 		panic(fmt.Sprintf("noise.Depolarizing1Q: p=%f out of range [0,1]", p))

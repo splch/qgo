@@ -45,7 +45,7 @@ type Backend struct {
 	s3Prefix  string
 	tgt       target.Target
 	logger    *slog.Logger
-	jobs      sync.Map // taskARN -> jobMeta
+	jobs      sync.Map // taskARN → jobMeta; entries are never evicted — recreate Backend for long-lived use
 }
 
 type jobMeta struct {

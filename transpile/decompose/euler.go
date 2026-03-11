@@ -6,6 +6,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/internal/mathutil"
 )
 
 // EulerBasis selects the Euler decomposition convention.
@@ -99,21 +100,21 @@ func EulerDecompose(g gate.Gate, qubit int) []ir.Operation {
 	alpha, beta, gamma, _ := EulerZYZ(g.Matrix())
 
 	var ops []ir.Operation
-	if !nearZeroMod2Pi(gamma) {
+	if !mathutil.NearZeroMod2Pi(gamma) {
 		ops = append(ops, ir.Operation{
-			Gate:   gate.RZ(normalizeAngle(gamma)),
+			Gate:   gate.RZ(mathutil.NormalizeAngle(gamma)),
 			Qubits: []int{qubit},
 		})
 	}
-	if !nearZeroMod2Pi(beta) {
+	if !mathutil.NearZeroMod2Pi(beta) {
 		ops = append(ops, ir.Operation{
-			Gate:   gate.RY(normalizeAngle(beta)),
+			Gate:   gate.RY(mathutil.NormalizeAngle(beta)),
 			Qubits: []int{qubit},
 		})
 	}
-	if !nearZeroMod2Pi(alpha) {
+	if !mathutil.NearZeroMod2Pi(alpha) {
 		ops = append(ops, ir.Operation{
-			Gate:   gate.RZ(normalizeAngle(alpha)),
+			Gate:   gate.RZ(mathutil.NormalizeAngle(alpha)),
 			Qubits: []int{qubit},
 		})
 	}
@@ -134,26 +135,6 @@ func clamp(v, lo, hi float64) float64 {
 		return hi
 	}
 	return v
-}
-
-// nearZeroMod2Pi reports whether angle is ≈ 0 mod 2π.
-func nearZeroMod2Pi(angle float64) bool {
-	a := math.Mod(angle, 2*math.Pi)
-	if a < 0 {
-		a += 2 * math.Pi
-	}
-	return a < 1e-10 || (2*math.Pi-a) < 1e-10
-}
-
-// normalizeAngle wraps angle to (-π, π].
-func normalizeAngle(angle float64) float64 {
-	a := math.Mod(angle, 2*math.Pi)
-	if a > math.Pi {
-		a -= 2 * math.Pi
-	} else if a <= -math.Pi {
-		a += 2 * math.Pi
-	}
-	return a
 }
 
 // EulerZXZ decomposes a 2×2 unitary U into Rz(alpha)·Rx(beta)·Rz(gamma)
@@ -198,14 +179,14 @@ func eulerZXZ(m []complex128, qubit int) []ir.Operation {
 	alpha, beta, gamma, _ := EulerZXZ(m)
 
 	var ops []ir.Operation
-	if !nearZeroMod2Pi(gamma) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(gamma)), Qubits: []int{qubit}})
+	if !mathutil.NearZeroMod2Pi(gamma) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(mathutil.NormalizeAngle(gamma)), Qubits: []int{qubit}})
 	}
-	if !nearZeroMod2Pi(beta) {
-		ops = append(ops, ir.Operation{Gate: gate.RX(normalizeAngle(beta)), Qubits: []int{qubit}})
+	if !mathutil.NearZeroMod2Pi(beta) {
+		ops = append(ops, ir.Operation{Gate: gate.RX(mathutil.NormalizeAngle(beta)), Qubits: []int{qubit}})
 	}
-	if !nearZeroMod2Pi(alpha) {
-		ops = append(ops, ir.Operation{Gate: gate.RZ(normalizeAngle(alpha)), Qubits: []int{qubit}})
+	if !mathutil.NearZeroMod2Pi(alpha) {
+		ops = append(ops, ir.Operation{Gate: gate.RZ(mathutil.NormalizeAngle(alpha)), Qubits: []int{qubit}})
 	}
 	if len(ops) == 0 {
 		return nil
@@ -228,14 +209,14 @@ func eulerZSX(m []complex128, qubit int) []ir.Operation {
 
 	var ops []ir.Operation
 	addRZ := func(angle float64) {
-		a := normalizeAngle(angle)
-		if !nearZeroMod2Pi(a) {
+		a := mathutil.NormalizeAngle(angle)
+		if !mathutil.NearZeroMod2Pi(a) {
 			ops = append(ops, ir.Operation{Gate: gate.RZ(a), Qubits: []int{qubit}})
 		}
 	}
 
 	switch {
-	case nearZeroMod2Pi(beta):
+	case mathutil.NearZeroMod2Pi(beta):
 		// Case 1: diagonal unitary → single RZ
 		addRZ(alpha + gamma)
 

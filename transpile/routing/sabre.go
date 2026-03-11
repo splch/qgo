@@ -8,7 +8,8 @@ import (
 	"github.com/splch/qgo/circuit/ir"
 )
 
-// sabrePass runs one direction of the SABRE algorithm with decay and extended set.
+// sabrePass runs one direction of the SABRE routing algorithm with decay and
+// extended-set lookahead. Reference: Li et al., arXiv:1809.02573.
 // Returns routed operations, final layout, and SWAP count.
 func sabrePass(d *dag, dist [][]int, adj map[int][]int,
 	initialLayout []int, opts Options, rng *rand.Rand) ([]ir.Operation, []int, int) {
