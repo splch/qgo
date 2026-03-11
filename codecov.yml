@@ -1,0 +1,17 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+    patch:
+      default:
+        target: 70%
+
+ignore:
+  - "observe/otelbridge/**"
+  - "observe/prombridge/**"
+  - "backend/braket/**"
+  - "**/doc.go"
+  - "**/*_test.go"
+  - "internal/**"

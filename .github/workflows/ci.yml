@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Verify go.mod is tidy
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test with race detector
+        if: matrix.os != 'ubuntu-latest'
+        run: go test -race -count=1 -timeout=5m ./...
+
+      - name: Test with race detector and coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -race -count=1 -timeout=5m -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          fail_ci_if_error: false
+
+  test-submodules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Test backend/braket
+        working-directory: backend/braket
+        run: |
+          go mod tidy && git diff --exit-code go.mod go.sum
+          go vet ./...
+          go test -race -count=1 -timeout=5m ./...
+
+      - name: Build observe/otelbridge
+        working-directory: observe/otelbridge
+        run: |
+          go mod tidy && git diff --exit-code go.mod go.sum
+          go build ./...
+
+      - name: Build observe/prombridge
+        working-directory: observe/prombridge
+        run: |
+          go mod tidy && git diff --exit-code go.mod go.sum
+          go build ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Lint main module
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+
+      - name: Lint backend/braket
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          working-directory: backend/braket
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: "1.24"
+
+      - name: Gosec
+        uses: securego/gosec@master
+        with:
+          args: -exclude-dir=backend/braket -exclude-dir=observe/otelbridge -exclude-dir=observe/prombridge ./...

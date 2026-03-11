@@ -1,0 +1,46 @@
+name: Fuzz
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # Daily at 4 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: ./qasm/parser
+            targets: FuzzParse FuzzRoundTrip
+          - package: ./qasm/emitter
+            targets: FuzzEmit FuzzEmitAllGateTypes
+          - package: ./transpile/pass
+            targets: FuzzDecomposeToTarget FuzzDecomposeToSimulator FuzzCancelAdjacent FuzzMergeRotations FuzzCancelAdjacentInversePairs
+          - package: ./backend/ionq
+            targets: FuzzMarshalCircuit FuzzMarshalNativeCircuit FuzzDetectGateset FuzzBitstring FuzzRadiansToTurns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Fuzz ${{ matrix.package }}
+        run: |
+          for target in ${{ matrix.targets }}; do
+            echo "::group::Fuzzing $target"
+            go test ${{ matrix.package }} -run=^$ -fuzz="^${target}$" -fuzztime=30s
+            echo "::endgroup::"
+          done
+
+      - name: Upload crashers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers-${{ strategy.job-index }}
+          path: "**/testdata/fuzz/**/corpora/**"
+          retention-days: 30
