@@ -34,6 +34,7 @@ func passesForLevel(level Level) []namedPass {
 		return []namedPass{
 			{"remove_barriers", pass.RemoveBarriers},
 			{"decompose_to_target", pass.DecomposeToTarget},
+			{"fix_direction", pass.FixDirection},
 			{"validate_target", pass.ValidateTarget},
 		}
 	case LevelBasic:
@@ -41,6 +42,7 @@ func passesForLevel(level Level) []namedPass {
 			{"remove_barriers", pass.RemoveBarriers},
 			{"route", routeIfNeeded},
 			{"decompose_to_target", pass.DecomposeToTarget},
+			{"fix_direction", pass.FixDirection},
 			{"cancel_adjacent", pass.CancelAdjacent},
 			{"merge_rotations", pass.MergeRotations},
 			{"cancel_adjacent", pass.CancelAdjacent},
@@ -51,6 +53,7 @@ func passesForLevel(level Level) []namedPass {
 			{"remove_barriers", pass.RemoveBarriers},
 			{"route", routeIfNeeded},
 			{"decompose_to_target", pass.DecomposeToTarget},
+			{"fix_direction", pass.FixDirection},
 			{"cancel_adjacent", pass.CancelAdjacent},
 			{"merge_rotations", pass.MergeRotations},
 			{"commute", pass.CommuteThroughCNOT},

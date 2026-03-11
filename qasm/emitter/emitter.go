@@ -110,6 +110,21 @@ func (e *emitter) emitOp(op ir.Operation) error {
 		e.writef("if (%s == %d) ", op.Condition.Register, op.Condition.Value)
 	}
 
+	// For symbolic (unbound) gates, emit parameter names from the gate name.
+	if params == nil {
+		// Check if this is a symbolic gate by looking for {param} in name.
+		if idx := strings.Index(name, "({"); idx >= 0 {
+			// Extract the symbolic parameter string between ({ and })
+			end := strings.LastIndex(name, "})")
+			if end > idx {
+				symParams := name[idx+2 : end]
+				gateName = qasmGateName(name[:idx])
+				e.writef("%s(%s) %s;\n", gateName, symParams, strings.Join(qargs, ", "))
+				return nil
+			}
+		}
+	}
+
 	if len(params) > 0 {
 		pstrs := make([]string, len(params))
 		for i, p := range params {

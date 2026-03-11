@@ -25,6 +25,21 @@ func (t Target) HasBasisGate(name string) bool {
 	return false
 }
 
+// HasDirection reports whether the target supports a 2Q gate from q0 to q1
+// in that specific direction. Returns true for all-to-all targets (nil Connectivity).
+// For directed targets, checks exact (Q0==q0, Q1==q1) match.
+func (t Target) HasDirection(q0, q1 int) bool {
+	if t.Connectivity == nil {
+		return true
+	}
+	for _, p := range t.Connectivity {
+		if p.Q0 == q0 && p.Q1 == q1 {
+			return true
+		}
+	}
+	return false
+}
+
 // IsConnected reports whether q0 and q1 are directly connected.
 // Returns true for all-to-all targets (nil Connectivity).
 func (t Target) IsConnected(q0, q1 int) bool {

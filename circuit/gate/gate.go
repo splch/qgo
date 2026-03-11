@@ -25,6 +25,14 @@ type Gate interface {
 	Decompose(qubits []int) []Applied
 }
 
+// Bindable is optionally implemented by gates with symbolic parameters.
+// It enables parameterized/variational circuits.
+type Bindable interface {
+	Bind(bindings map[string]float64) (Gate, error)
+	FreeParameters() []string
+	IsBound() bool
+}
+
 // Applied pairs a Gate with specific qubit indices.
 type Applied struct {
 	Gate   Gate

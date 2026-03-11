@@ -6,6 +6,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/circuit/param"
 )
 
 // Builder accumulates operations and produces an immutable Circuit.
@@ -144,6 +145,50 @@ func (b *Builder) Phase(phi float64, q int) *Builder { return b.Apply(gate.Phase
 // U3 applies the universal single-qubit gate.
 func (b *Builder) U3(theta, phi, lambda float64, q int) *Builder {
 	return b.Apply(gate.U3(theta, phi, lambda), q)
+}
+
+// Unitary applies a custom unitary gate created from the given matrix.
+// The name is used for display; the matrix must be a valid unitary (2x2, 4x4, or 8x8).
+func (b *Builder) Unitary(name string, matrix []complex128, qubits ...int) *Builder {
+	if b.err != nil {
+		return b
+	}
+	g, err := gate.Unitary(name, matrix)
+	if err != nil {
+		b.err = err
+		return b
+	}
+	return b.Apply(g, qubits...)
+}
+
+// SymRX applies a symbolic RX gate.
+func (b *Builder) SymRX(theta param.Expr, q int) *Builder {
+	return b.Apply(param.SymRX(theta), q)
+}
+
+// SymRY applies a symbolic RY gate.
+func (b *Builder) SymRY(theta param.Expr, q int) *Builder {
+	return b.Apply(param.SymRY(theta), q)
+}
+
+// SymRZ applies a symbolic RZ gate.
+func (b *Builder) SymRZ(theta param.Expr, q int) *Builder {
+	return b.Apply(param.SymRZ(theta), q)
+}
+
+// SymPhase applies a symbolic Phase gate.
+func (b *Builder) SymPhase(phi param.Expr, q int) *Builder {
+	return b.Apply(param.SymPhase(phi), q)
+}
+
+// SymU3 applies a symbolic U3 gate.
+func (b *Builder) SymU3(theta, phi, lambda param.Expr, q int) *Builder {
+	return b.Apply(param.SymU3(theta, phi, lambda), q)
+}
+
+// SymCP applies a symbolic controlled-phase gate.
+func (b *Builder) SymCP(phi param.Expr, q0, q1 int) *Builder {
+	return b.Apply(param.SymCP(phi), q0, q1)
 }
 
 // Measure adds a measurement of qubit to classical bit.

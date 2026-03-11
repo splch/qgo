@@ -1,7 +1,11 @@
 // Package ir defines the circuit intermediate representation.
 package ir
 
-import "github.com/splch/qgo/circuit/gate"
+import (
+	"fmt"
+
+	"github.com/splch/qgo/circuit/gate"
+)
 
 // Circuit is an immutable sequence of quantum operations with metadata.
 type Circuit struct {
@@ -108,6 +112,55 @@ func (c *Circuit) depth() int {
 		}
 	}
 	return maxDepth
+}
+
+// Bind substitutes symbolic parameters with concrete values, returning a new Circuit.
+// Gates implementing gate.Bindable are bound; all others are copied as-is.
+// Returns an error if any symbolic gate has unbound parameters.
+func Bind(c *Circuit, bindings map[string]float64) (*Circuit, error) {
+	ops := c.Ops()
+	result := make([]Operation, len(ops))
+	for i, op := range ops {
+		if op.Gate == nil {
+			result[i] = op
+			continue
+		}
+		if b, ok := op.Gate.(gate.Bindable); ok {
+			bound, err := b.Bind(bindings)
+			if err != nil {
+				return nil, fmt.Errorf("ir.Bind: op %d: %w", i, err)
+			}
+			result[i] = Operation{
+				Gate:      bound,
+				Qubits:    op.Qubits,
+				Clbits:    op.Clbits,
+				Condition: op.Condition,
+			}
+		} else {
+			result[i] = op
+		}
+	}
+	return New(c.Name(), c.NumQubits(), c.NumClbits(), result, c.Metadata()), nil
+}
+
+// FreeParameters returns the names of all unbound symbolic parameters in the circuit.
+func FreeParameters(c *Circuit) []string {
+	seen := make(map[string]bool)
+	var names []string
+	for _, op := range c.Ops() {
+		if op.Gate == nil {
+			continue
+		}
+		if b, ok := op.Gate.(gate.Bindable); ok {
+			for _, name := range b.FreeParameters() {
+				if !seen[name] {
+					seen[name] = true
+					names = append(names, name)
+				}
+			}
+		}
+	}
+	return names
 }
 
 // Stats holds circuit statistics.

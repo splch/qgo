@@ -2,9 +2,11 @@ package builder
 
 import (
 	"math"
+	"math/cmplx"
 	"testing"
 
 	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/qgo/sim/statevector"
 )
 
 func TestBellCircuit(t *testing.T) {
@@ -162,5 +164,83 @@ func TestMetadata(t *testing.T) {
 	}
 	if c.Metadata()["author"] != "test" {
 		t.Errorf("Metadata[author] = %q, want %q", c.Metadata()["author"], "test")
+	}
+}
+
+func TestUnitaryBuilderMethod(t *testing.T) {
+	s2 := 1.0 / math.Sqrt2
+	hMatrix := []complex128{
+		complex(s2, 0), complex(s2, 0),
+		complex(s2, 0), complex(-s2, 0),
+	}
+
+	// Build circuit using the Unitary builder method.
+	c, err := New("unitary-test", 1).
+		Unitary("myH", hMatrix, 0).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Ops()) != 1 {
+		t.Fatalf("len(Ops()) = %d, want 1", len(c.Ops()))
+	}
+	if c.Ops()[0].Gate.Name() != "myH" {
+		t.Errorf("gate name = %q, want %q", c.Ops()[0].Gate.Name(), "myH")
+	}
+}
+
+func TestUnitaryBuilderInvalidMatrix(t *testing.T) {
+	_, err := New("bad-unitary", 1).
+		Unitary("bad", []complex128{1, 1, 1, 1}, 0).
+		Build()
+	if err == nil {
+		t.Fatal("expected error for non-unitary matrix")
+	}
+}
+
+func TestUnitaryEndToEnd(t *testing.T) {
+	// Create a custom unitary matching the H gate, apply it, and verify
+	// the simulator produces the same statevector as the built-in H gate.
+	s2 := 1.0 / math.Sqrt2
+	hMatrix := []complex128{
+		complex(s2, 0), complex(s2, 0),
+		complex(s2, 0), complex(-s2, 0),
+	}
+
+	// Circuit with custom unitary H.
+	cCustom, err := New("custom-h", 1).
+		Unitary("myH", hMatrix, 0).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Circuit with built-in H.
+	cBuiltin, err := New("builtin-h", 1).
+		H(0).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Evolve both and compare statevectors.
+	simCustom := statevector.New(1)
+	if err := simCustom.Evolve(cCustom); err != nil {
+		t.Fatal(err)
+	}
+
+	simBuiltin := statevector.New(1)
+	if err := simBuiltin.Evolve(cBuiltin); err != nil {
+		t.Fatal(err)
+	}
+
+	svCustom := simCustom.StateVector()
+	svBuiltin := simBuiltin.StateVector()
+
+	const eps = 1e-14
+	for i := range svCustom {
+		if cmplx.Abs(svCustom[i]-svBuiltin[i]) > eps {
+			t.Errorf("StateVector[%d]: custom=%v, builtin=%v", i, svCustom[i], svBuiltin[i])
+		}
 	}
 }

@@ -1,0 +1,410 @@
+package densitymatrix
+
+import (
+	"math"
+	"math/cmplx"
+	"testing"
+
+	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/qgo/sim/statevector"
+)
+
+func TestNew(t *testing.T) {
+	s := New(2)
+	rho := s.DensityMatrix()
+	if len(rho) != 16 {
+		t.Fatalf("expected 16 elements, got %d", len(rho))
+	}
+	if rho[0] != 1 {
+		t.Errorf("rho[0][0] = %v, want 1", rho[0])
+	}
+	for i := 1; i < 16; i++ {
+		if rho[i] != 0 {
+			t.Errorf("rho[%d] = %v, want 0", i, rho[i])
+		}
+	}
+}
+
+func TestPurity_PureState(t *testing.T) {
+	s := New(2)
+	c, _ := builder.New("bell", 2).H(0).CNOT(0, 1).Build()
+	if err := s.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	p := s.Purity()
+	if math.Abs(p-1.0) > 1e-10 {
+		t.Errorf("purity = %v, want 1.0 for pure state", p)
+	}
+}
+
+// TestNoiselessVsStatevector verifies that density matrix matches statevector
+// for noiseless evolution.
+func TestNoiselessVsStatevector(t *testing.T) {
+	tests := []struct {
+		name    string
+		circuit func() *ir.Circuit
+	}{
+		{
+			name: "Bell",
+			circuit: func() *ir.Circuit {
+				c, _ := builder.New("bell", 2).H(0).CNOT(0, 1).Build()
+				return c
+			},
+		},
+		{
+			name: "GHZ3",
+			circuit: func() *ir.Circuit {
+				c, _ := builder.New("ghz3", 3).H(0).CNOT(0, 1).CNOT(1, 2).Build()
+				return c
+			},
+		},
+		{
+			name: "SingleH",
+			circuit: func() *ir.Circuit {
+				c, _ := builder.New("h", 1).H(0).Build()
+				return c
+			},
+		},
+		{
+			name: "RZ",
+			circuit: func() *ir.Circuit {
+				c, _ := builder.New("rz", 1).RZ(math.Pi/4, 0).Build()
+				return c
+			},
+		},
+		{
+			name: "TwoQubitSequence",
+			circuit: func() *ir.Circuit {
+				c, _ := builder.New("seq", 2).H(0).RZ(math.Pi/3, 1).CNOT(0, 1).H(1).Build()
+				return c
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.circuit()
+			nq := c.NumQubits()
+
+			// Statevector simulation.
+			sv := statevector.New(nq)
+			if err := sv.Evolve(c); err != nil {
+				t.Fatal(err)
+			}
+			psi := sv.StateVector()
+
+			// Density matrix simulation.
+			dm := New(nq)
+			if err := dm.Evolve(c); err != nil {
+				t.Fatal(err)
+			}
+			rho := dm.DensityMatrix()
+
+			// Verify rho = |psi><psi|
+			dim := 1 << nq
+			for i := range dim {
+				for j := range dim {
+					expected := psi[i] * conj(psi[j])
+					got := rho[i*dim+j]
+					if cmplx.Abs(got-expected) > 1e-10 {
+						t.Errorf("rho[%d][%d] = %v, want %v", i, j, got, expected)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestFidelity_PureState(t *testing.T) {
+	c, _ := builder.New("h", 1).H(0).Build()
+
+	sv := statevector.New(1)
+	if err := sv.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	psi := sv.StateVector()
+
+	dm := New(1)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	f := dm.Fidelity(psi)
+	if math.Abs(f-1.0) > 1e-10 {
+		t.Errorf("fidelity = %v, want 1.0", f)
+	}
+}
+
+func TestDepolarizing_ReducesPurity(t *testing.T) {
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.1))
+	nm.AddDefaultError(2, noise.Depolarizing2Q(0.1))
+
+	c, _ := builder.New("bell", 2).H(0).CNOT(0, 1).Build()
+
+	dm := New(2)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	p := dm.Purity()
+	if p >= 1.0-1e-10 {
+		t.Errorf("purity = %v, expected < 1.0 with depolarizing noise", p)
+	}
+	if p <= 0 {
+		t.Errorf("purity = %v, expected > 0", p)
+	}
+}
+
+func TestDepolarizing_MaximallyMixed(t *testing.T) {
+	// With Kraus ops sqrt(1-p)I, sqrt(p/3){X,Y,Z}, maximally mixed occurs at p=3/4.
+	// E(ρ) = (1-p)ρ + (p/3)(XρX + YρY + ZρZ) = I/2 when p=3/4.
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.75))
+
+	c, _ := builder.New("x", 1).X(0).Build()
+
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	// Maximally mixed: diag(0.5, 0.5), off-diag = 0.
+	if math.Abs(real(rho[0])-0.5) > 1e-10 {
+		t.Errorf("rho[0][0] = %v, want 0.5", rho[0])
+	}
+	if math.Abs(real(rho[3])-0.5) > 1e-10 {
+		t.Errorf("rho[1][1] = %v, want 0.5", rho[3])
+	}
+}
+
+func TestAmplitudeDamping(t *testing.T) {
+	// Apply X (|0> -> |1>), then amplitude damping with gamma=0.5.
+	// rho[0][0] should be gamma = 0.5 (probability of decaying to |0>).
+	nm := noise.New()
+	nm.AddGateError("X", noise.AmplitudeDamping(0.5))
+
+	c, _ := builder.New("x", 1).X(0).Build()
+
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	// After X: |1><1|. After AD(0.5): rho[0][0] = gamma = 0.5.
+	if math.Abs(real(rho[0])-0.5) > 1e-10 {
+		t.Errorf("rho[0][0] = %v, want 0.5", rho[0])
+	}
+	// rho[1][1] = 1 - gamma = 0.5.
+	if math.Abs(real(rho[3])-0.5) > 1e-10 {
+		t.Errorf("rho[1][1] = %v, want 0.5", rho[3])
+	}
+}
+
+func TestPhaseDamping(t *testing.T) {
+	// H on |0> gives |+> = (|0>+|1>)/sqrt(2).
+	// rho = [[0.5, 0.5], [0.5, 0.5]].
+	// Phase damping with lambda: off-diag *= sqrt(1-lambda).
+	lambda := 0.5
+	nm := noise.New()
+	nm.AddGateError("H", noise.PhaseDamping(lambda))
+
+	c, _ := builder.New("h", 1).H(0).Build()
+
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	expected01 := complex(0.5*math.Sqrt(1-lambda), 0)
+	if cmplx.Abs(rho[1]-expected01) > 1e-10 {
+		t.Errorf("rho[0][1] = %v, want %v", rho[1], expected01)
+	}
+}
+
+func TestReadoutError(t *testing.T) {
+	dm := New(1)
+	nm := noise.New()
+	nm.AddReadoutError(0, noise.NewReadoutError(0.1, 0.2))
+	dm.WithNoise(nm)
+
+	// |0> state: probs = [1, 0].
+	probs := dm.DiagonalProbs()
+	noisy := dm.ApplyReadoutError(probs)
+
+	// Expected: P(0) = (1-0.1)*1 + 0.2*0 = 0.9, P(1) = 0.1*1 + 0.8*0 = 0.1.
+	if math.Abs(noisy[0]-0.9) > 1e-10 {
+		t.Errorf("P(0) = %v, want 0.9", noisy[0])
+	}
+	if math.Abs(noisy[1]-0.1) > 1e-10 {
+		t.Errorf("P(1) = %v, want 0.1", noisy[1])
+	}
+}
+
+func TestTracePreservation(t *testing.T) {
+	// After any evolution, Tr(rho) should be 1.
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.1))
+	nm.AddDefaultError(2, noise.Depolarizing2Q(0.1))
+
+	c, _ := builder.New("bell", 2).H(0).CNOT(0, 1).Build()
+
+	dm := New(2)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	var tr float64
+	dim := 1 << 2
+	for i := range dim {
+		tr += real(rho[i*dim+i])
+	}
+	if math.Abs(tr-1.0) > 1e-10 {
+		t.Errorf("Tr(rho) = %v, want 1.0", tr)
+	}
+}
+
+func TestPositivity(t *testing.T) {
+	// Diagonal elements should be non-negative.
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.3))
+
+	c, _ := builder.New("seq", 2).H(0).RZ(math.Pi/3, 1).CNOT(0, 1).Build()
+
+	dm := New(2)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	dim := 1 << 2
+	for i := range dim {
+		d := real(rho[i*dim+i])
+		if d < -1e-10 {
+			t.Errorf("rho[%d][%d] = %v, negative diagonal", i, i, d)
+		}
+	}
+}
+
+func TestRun(t *testing.T) {
+	c, _ := builder.New("x", 1).WithClbits(1).X(0).Build()
+	dm := New(1)
+	counts, err := dm.Run(c, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// X gate should give |1> deterministically.
+	if counts["1"] != 100 {
+		t.Errorf("counts = %v, want {1: 100}", counts)
+	}
+}
+
+func TestNoiseModelLookup(t *testing.T) {
+	nm := noise.New()
+	ch1 := noise.Depolarizing1Q(0.01)
+	ch2 := noise.Depolarizing1Q(0.05)
+	ch3 := noise.Depolarizing1Q(0.10)
+
+	nm.AddGateQubitError("H", []int{0}, ch1)
+	nm.AddGateError("H", ch2)
+	nm.AddDefaultError(1, ch3)
+
+	// Most specific: gate+qubits.
+	if got := nm.Lookup("H", []int{0}); got != ch1 {
+		t.Error("expected qubit-specific channel")
+	}
+	// Gate name match.
+	if got := nm.Lookup("H", []int{1}); got != ch2 {
+		t.Error("expected gate-name channel")
+	}
+	// Default.
+	if got := nm.Lookup("X", []int{0}); got != ch3 {
+		t.Error("expected default channel")
+	}
+	// No match.
+	if got := nm.Lookup("CNOT", []int{0, 1}); got != nil {
+		t.Error("expected nil for unmatched gate")
+	}
+}
+
+func TestBitFlip(t *testing.T) {
+	// |0> + bit flip p=1 should give |1>.
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.BitFlip(1.0))
+
+	c, _ := builder.New("id", 1).Apply(gate.I, 0).Build()
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	// Should be |1><1|.
+	if math.Abs(real(rho[3])-1.0) > 1e-10 {
+		t.Errorf("rho[1][1] = %v, want 1.0", rho[3])
+	}
+}
+
+func TestPhaseFlip(t *testing.T) {
+	// |+> + phase flip p=1 should give |->.
+	// |+> = [[0.5, 0.5],[0.5, 0.5]]
+	// Z|+> = |-> = [[0.5, -0.5],[-0.5, 0.5]]
+	nm := noise.New()
+	nm.AddGateError("H", noise.PhaseFlip(1.0))
+
+	c, _ := builder.New("h", 1).H(0).Build()
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+
+	rho := dm.DensityMatrix()
+	// |-> state: rho[0][1] = -0.5.
+	if math.Abs(real(rho[1])+0.5) > 1e-10 {
+		t.Errorf("rho[0][1] = %v, want -0.5", rho[1])
+	}
+}
+
+func BenchmarkEvolve8Q(b *testing.B) {
+	c, _ := builder.New("bench", 8).
+		H(0).H(1).H(2).H(3).H(4).H(5).H(6).H(7).
+		CNOT(0, 1).CNOT(2, 3).CNOT(4, 5).CNOT(6, 7).
+		Build()
+	b.ResetTimer()
+	for range b.N {
+		dm := New(8)
+		dm.Evolve(c) //nolint:errcheck
+	}
+}
+
+func BenchmarkEvolveNoisy8Q(b *testing.B) {
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.01))
+	nm.AddDefaultError(2, noise.Depolarizing2Q(0.01))
+
+	c, _ := builder.New("bench", 8).
+		H(0).H(1).H(2).H(3).H(4).H(5).H(6).H(7).
+		CNOT(0, 1).CNOT(2, 3).CNOT(4, 5).CNOT(6, 7).
+		Build()
+	b.ResetTimer()
+	for range b.N {
+		dm := New(8)
+		dm.WithNoise(nm)
+		dm.Evolve(c) //nolint:errcheck
+	}
+}
