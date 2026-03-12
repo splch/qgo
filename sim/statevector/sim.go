@@ -11,6 +11,7 @@ import (
 
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/qgo/sim/pauli"
 )
 
 // Sim simulates a circuit via full statevector evolution.
@@ -196,6 +197,28 @@ func optimalWorkers(nQubits int) int {
 		return maxProcs
 	}
 	return maxByWork
+}
+
+// ExpectPauliString computes Re(⟨psi|P|psi⟩) for a Pauli string P.
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.Expect directly for complex128.
+func (s *Sim) ExpectPauliString(ps pauli.PauliString) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("statevector: PauliString has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
+	return real(pauli.Expect(s.state, ps))
+}
+
+// ExpectPauliSum computes Re(⟨psi|H|psi⟩) for a Hamiltonian H (sum of Pauli strings).
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.ExpectSum directly for complex128.
+func (s *Sim) ExpectPauliSum(ps pauli.PauliSum) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("statevector: PauliSum has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
+	return real(pauli.ExpectSum(s.state, ps))
 }
 
 // ExpectationValue computes <psi|O|psi> for a diagonal Pauli-Z observable

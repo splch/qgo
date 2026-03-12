@@ -425,3 +425,44 @@ func TestFormatKey(t *testing.T) {
 		t.Errorf("expected H:3, got %s", key)
 	}
 }
+
+func TestDepolarizing1Q_MaxMixed_KrausValues(t *testing.T) {
+	ch := Depolarizing1Q(0.75)
+	kraus := ch.Kraus()
+	// At p=0.75: sqrt(1-p)=0.5, sqrt(p/3)=0.5
+	// E0 = 0.5*I, E1 = 0.5*X, E2 = 0.5*Y, E3 = 0.5*Z
+	// E0[0] and E0[3] should be 0.5
+	if math.Abs(real(kraus[0][0])-0.5) > 1e-10 {
+		t.Errorf("E0[0,0] = %v, want 0.5", kraus[0][0])
+	}
+	if math.Abs(real(kraus[0][3])-0.5) > 1e-10 {
+		t.Errorf("E0[1,1] = %v, want 0.5", kraus[0][3])
+	}
+}
+
+func TestThermalRelaxation_T2EqualsT1(t *testing.T) {
+	ch := ThermalRelaxation(100, 100, 10)
+	checkKrausComplete(t, ch)
+}
+
+func TestThermalRelaxation_T2Equals2T1(t *testing.T) {
+	ch := ThermalRelaxation(50, 100, 10)
+	checkKrausComplete(t, ch)
+}
+
+func TestAmplitudeDamping_HalfGamma(t *testing.T) {
+	ch := AmplitudeDamping(0.5)
+	kraus := ch.Kraus()
+	// E0 = diag(1, sqrt(1-0.5)) = diag(1, sqrt(0.5))
+	s := math.Sqrt(0.5)
+	if math.Abs(real(kraus[0][0])-1.0) > 1e-10 {
+		t.Errorf("E0[0,0] = %v, want 1.0", kraus[0][0])
+	}
+	if math.Abs(real(kraus[0][3])-s) > 1e-10 {
+		t.Errorf("E0[1,1] = %v, want %v", kraus[0][3], s)
+	}
+	// E1[0,1] = sqrt(gamma) = sqrt(0.5)
+	if math.Abs(real(kraus[1][1])-s) > 1e-10 {
+		t.Errorf("E1[0,1] = %v, want %v", kraus[1][1], s)
+	}
+}

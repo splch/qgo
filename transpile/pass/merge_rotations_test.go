@@ -193,3 +193,34 @@ func TestMergeRotationsEmpty(t *testing.T) {
 		t.Errorf("expected 0 ops for empty circuit, got %d", len(result.Ops()))
 	}
 }
+
+func TestMergeRotations_AngleNear2Pi(t *testing.T) {
+	eps := 0.001
+	ops := []ir.Operation{
+		{Gate: gate.RZ(math.Pi - eps), Qubits: []int{0}},
+		{Gate: gate.RZ(math.Pi + eps), Qubits: []int{0}},
+	}
+	c := ir.New("near2pi", 1, 0, ops, nil)
+	result, err := MergeRotations(c, target.Simulator)
+	if err != nil {
+		t.Fatalf("MergeRotations: %v", err)
+	}
+	if len(result.Ops()) != 0 {
+		t.Errorf("expected 0 ops after near-2pi cancellation, got %d", len(result.Ops()))
+	}
+}
+
+func TestMergeRotations_LargeAngles(t *testing.T) {
+	ops := []ir.Operation{
+		{Gate: gate.RZ(3 * math.Pi), Qubits: []int{0}},
+		{Gate: gate.RZ(3 * math.Pi), Qubits: []int{0}},
+	}
+	c := ir.New("large_angles", 1, 0, ops, nil)
+	result, err := MergeRotations(c, target.Simulator)
+	if err != nil {
+		t.Fatalf("MergeRotations: %v", err)
+	}
+	if len(result.Ops()) != 0 {
+		t.Errorf("expected 0 ops after large angle cancellation, got %d", len(result.Ops()))
+	}
+}

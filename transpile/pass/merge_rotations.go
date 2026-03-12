@@ -1,6 +1,7 @@
 package pass
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/splch/qgo/circuit/gate"
@@ -90,6 +91,8 @@ func mergeOnce(ops []ir.Operation, numQubits, numClbits int) ([]ir.Operation, bo
 				newGate = gate.RY(angle)
 			case "RX":
 				newGate = gate.RX(angle)
+			default:
+				panic(fmt.Sprintf("merge_rotations: unexpected rotation axis %q", axis))
 			}
 			replacement[i] = ir.Operation{Gate: newGate, Qubits: op.Qubits}
 			removed[j] = true

@@ -397,8 +397,12 @@ func (p *parser) parseMeasure() error {
 	if err != nil {
 		return err
 	}
-	// Implicit classical bits.
+	// Implicit classical bits: each qubit maps to the same-index classical bit.
 	for _, q := range qubits {
+		if q >= p.numClbits {
+			return fmt.Errorf("line %d:%d: implicit measurement on q[%d] requires c[%d] but only %d classical bits declared",
+				t.Line, t.Col, q, q, p.numClbits)
+		}
 		p.ops = append(p.ops, ir.Operation{Qubits: []int{q}, Clbits: []int{q}})
 	}
 	return nil

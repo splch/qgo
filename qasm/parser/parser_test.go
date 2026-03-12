@@ -316,3 +316,64 @@ qubit[0] q;
 		t.Fatal("expected error for zero-size register")
 	}
 }
+
+func TestParse_NegativeRegisterIndex(t *testing.T) {
+	_, err := ParseString(`
+OPENQASM 3.0;
+qubit[2] q;
+h q[-1];
+`)
+	if err == nil {
+		t.Fatal("expected error for negative qubit index")
+	}
+}
+
+func TestParse_ImplicitMeasureClbitOverflow(t *testing.T) {
+	_, err := ParseString(`
+OPENQASM 3.0;
+qubit[3] q;
+bit[1] c;
+measure q;
+`)
+	if err == nil {
+		t.Fatal("expected error for implicit measurement with insufficient classical bits")
+	}
+}
+
+func TestParse_DivisionByZeroInExpr(t *testing.T) {
+	_, err := ParseString(`
+OPENQASM 3.0;
+qubit[1] q;
+rx(1/0) q[0];
+`)
+	if err == nil {
+		t.Fatal("expected error for division by zero")
+	}
+}
+
+func TestParse_MissingSemicolon(t *testing.T) {
+	_, err := ParseString(`
+OPENQASM 3.0;
+qubit[1] q
+h q[0];
+`)
+	if err == nil {
+		t.Fatal("expected error for missing semicolon")
+	}
+}
+
+func TestParse_ImplicitMeasureValid(t *testing.T) {
+	c, err := ParseString(`
+OPENQASM 3.0;
+qubit[2] q;
+bit[2] c;
+measure q;
+`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// 2 measurement ops expected.
+	if len(c.Ops()) != 2 {
+		t.Errorf("len(Ops) = %d, want 2", len(c.Ops()))
+	}
+}

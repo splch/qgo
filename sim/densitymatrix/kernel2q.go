@@ -171,11 +171,10 @@ func (s *Sim) gate2ColsParallel(q0, q1 int, m []complex128) {
 	loMask := 1 << lo
 	hiMask := 1 << hi
 
+	// Element-wise conjugate (matching serial gate2Cols), NOT conjugate-transpose.
 	var ud [16]complex128
-	for i := range 4 {
-		for j := range 4 {
-			ud[i*4+j] = conj(m[j*4+i])
-		}
+	for i := range 16 {
+		ud[i] = conj(m[i])
 	}
 
 	nWorkers := optimalWorkers(s.numQubits)

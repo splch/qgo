@@ -9,6 +9,7 @@ import (
 	"github.com/splch/qgo/circuit/gate"
 	"github.com/splch/qgo/circuit/ir"
 	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/qgo/sim/pauli"
 	"github.com/splch/qgo/sim/statevector"
 )
 
@@ -477,5 +478,87 @@ func TestEvolveMCP(t *testing.T) {
 	fid := dm.Fidelity(svState)
 	if math.Abs(fid-1.0) > 1e-8 {
 		t.Errorf("MCP(π,2) fidelity = %f, want 1.0", fid)
+	}
+}
+
+func TestRun_ZeroShots(t *testing.T) {
+	c, _ := builder.New("x", 1).WithClbits(1).X(0).Build()
+	dm := New(1)
+	counts, err := dm.Run(c, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(counts) != 0 {
+		t.Errorf("expected empty counts for 0 shots, got %v", counts)
+	}
+}
+
+func TestEvolve_EmptyCircuit(t *testing.T) {
+	c, _ := builder.New("empty", 2).Build()
+	dm := New(2)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	rho := dm.DensityMatrix()
+	// Should be |00><00|: rho[0] = 1, rest = 0.
+	if cmplx.Abs(rho[0]-1) > 1e-10 {
+		t.Errorf("rho[0] = %v, want 1", rho[0])
+	}
+	for i := 1; i < len(rho); i++ {
+		if cmplx.Abs(rho[i]) > 1e-10 {
+			t.Errorf("rho[%d] = %v, want 0", i, rho[i])
+		}
+	}
+}
+
+func TestExpectPauliString_Mismatched(t *testing.T) {
+	c, _ := builder.New("id", 2).Build()
+	dm := New(2)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	ps := pauli.NewPauliString(1.0, map[int]pauli.Pauli{0: pauli.Z}, 3)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for mismatched qubit count")
+		}
+	}()
+	dm.ExpectPauliString(ps)
+}
+
+func TestExpectPauliSum_Mismatched(t *testing.T) {
+	c, _ := builder.New("id", 2).Build()
+	dm := New(2)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	ps := pauli.NewPauliString(1.0, map[int]pauli.Pauli{0: pauli.Z}, 3)
+	sum, err := pauli.NewPauliSum([]pauli.PauliString{ps})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for mismatched qubit count")
+		}
+	}()
+	dm.ExpectPauliSum(sum)
+}
+
+func TestNoiseAccumulation(t *testing.T) {
+	nm := noise.New()
+	nm.AddDefaultError(1, noise.Depolarizing1Q(0.1))
+
+	c, _ := builder.New("hhh", 1).H(0).H(0).H(0).Build()
+	dm := New(1)
+	dm.WithNoise(nm)
+	if err := dm.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	p := dm.Purity()
+	if p >= 1.0-1e-10 {
+		t.Errorf("purity = %v, expected < 1.0 after noisy gates", p)
 	}
 }
