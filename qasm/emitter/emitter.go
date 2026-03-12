@@ -113,7 +113,11 @@ func (e *emitter) emitOp(op ir.Operation) error {
 	}
 
 	if op.Condition != nil {
-		e.writef("if (%s == %d) ", op.Condition.Register, op.Condition.Value)
+		if op.Condition.Register != "" {
+			e.writef("if (%s == %d) ", op.Condition.Register, op.Condition.Value)
+		} else {
+			e.writef("if (c[%d] == %d) ", op.Condition.Clbit, op.Condition.Value)
+		}
 	}
 
 	// For symbolic (unbound) gates, emit parameter names from the gate name.

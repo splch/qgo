@@ -62,6 +62,10 @@ func mergeOnce(ops []ir.Operation, numQubits, numClbits int) ([]ir.Operation, bo
 		if j < 0 {
 			continue
 		}
+		// Do not merge across measurement or reset boundaries.
+		if isMeasureOrReset(ops[j]) {
+			continue
+		}
 		next := ops[j]
 		if next.Gate == nil || next.Gate.Qubits() != 1 || next.Gate.Params() == nil || len(next.Gate.Params()) != 1 {
 			continue
@@ -116,6 +120,17 @@ func mergeOnce(ops []ir.Operation, numQubits, numClbits int) ([]ir.Operation, bo
 		}
 	}
 	return result, true
+}
+
+// isMeasureOrReset returns true if the operation is a measurement or reset.
+func isMeasureOrReset(op ir.Operation) bool {
+	if op.Gate == nil && len(op.Clbits) > 0 {
+		return true
+	}
+	if op.Gate != nil && op.Gate.Name() == "reset" {
+		return true
+	}
+	return false
 }
 
 // rotationAxis returns "RX", "RY", or "RZ" for rotation gates, or "" otherwise.

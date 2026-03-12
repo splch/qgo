@@ -473,10 +473,10 @@ func (p *parser) parseReset() error {
 	if err != nil {
 		return err
 	}
-	// Reset is represented as an operation without a gate.
+	// Reset is represented using the shared gate.Reset pseudo-gate.
 	for _, q := range qubits {
 		p.ops = append(p.ops, ir.Operation{
-			Gate:   resetGate{},
+			Gate:   gate.Reset,
 			Qubits: []int{q},
 		})
 	}
@@ -524,13 +524,16 @@ func (p *parser) parseIf() error {
 	regName := condReg.Literal
 
 	// Optional index.
+	bitIdx := -1
 	if p.peek() == token.LBRACKET {
 		p.advance() // consume [
-		if _, err = p.parseExpr(); err != nil {
-			return err
+		v, err2 := p.parseExpr()
+		if err2 != nil {
+			return err2
 		}
-		if _, err = p.expect(token.RBRACKET); err != nil {
-			return err
+		bitIdx = int(v)
+		if _, err2 = p.expect(token.RBRACKET); err2 != nil {
+			return err2
 		}
 	}
 
@@ -547,7 +550,18 @@ func (p *parser) parseIf() error {
 		return err
 	}
 
-	cond := &ir.Condition{Register: regName, Value: int(val)}
+	// Resolve classical bit index.
+	clbit := 0
+	reg, ok := p.cregs[regName]
+	if ok {
+		if bitIdx >= 0 {
+			clbit = reg.start + bitIdx
+		} else {
+			clbit = reg.start
+		}
+	}
+
+	cond := &ir.Condition{Clbit: clbit, Value: int(val), Register: regName}
 
 	// Parse body — single statement or block.
 	if p.peek() == token.LBRACE {
@@ -1069,15 +1083,6 @@ func (g barrierGate) Matrix() []complex128             { return nil }
 func (g barrierGate) Params() []float64                { return nil }
 func (g barrierGate) Inverse() gate.Gate               { return g }
 func (g barrierGate) Decompose(_ []int) []gate.Applied { return nil }
-
-type resetGate struct{}
-
-func (g resetGate) Name() string                     { return "reset" }
-func (g resetGate) Qubits() int                      { return 1 }
-func (g resetGate) Matrix() []complex128             { return nil }
-func (g resetGate) Params() []float64                { return nil }
-func (g resetGate) Inverse() gate.Gate               { return g }
-func (g resetGate) Decompose(_ []int) []gate.Applied { return nil }
 
 type opaqueGate struct {
 	name   string
