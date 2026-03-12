@@ -75,6 +75,12 @@ func Fprint(w io.Writer, c *ir.Circuit, opts ...Option) error {
 
 	for _, p := range placements {
 		labels := gateLabels(p.op, cfg)
+		// Prepend condition indicator for conditioned ops.
+		if p.op.Condition != nil {
+			for i, l := range labels {
+				labels[i] = "c:" + l
+			}
+		}
 		qubits := p.op.Qubits
 
 		isMulti := len(qubits) > 1
@@ -285,6 +291,8 @@ func gateLabels(op ir.Operation, cfg *config) []string {
 			labels[i] = "|"
 		}
 		return labels
+	case "reset":
+		return []string{"|0>"}
 	}
 
 	// Check for multi-controlled gates via ControlledGate interface.

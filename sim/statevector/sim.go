@@ -32,7 +32,12 @@ func New(numQubits int) *Sim {
 }
 
 // Run executes the circuit and returns measurement counts.
+// For dynamic circuits (mid-circuit measurement, feed-forward, reset), it
+// automatically uses per-shot simulation with state collapse.
 func (s *Sim) Run(c *ir.Circuit, shots int) (map[string]int, error) {
+	if c.IsDynamic() {
+		return s.RunDynamic(c, shots)
+	}
 	if err := s.Evolve(c); err != nil {
 		return nil, err
 	}

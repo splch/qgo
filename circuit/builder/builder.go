@@ -271,6 +271,71 @@ func (b *Builder) MeasureAll() *Builder {
 	return b
 }
 
+// Reset resets a qubit to |0⟩.
+func (b *Builder) Reset(qubit int) *Builder {
+	if b.err != nil {
+		return b
+	}
+	b.validateQubit(qubit)
+	if b.err != nil {
+		return b
+	}
+	b.ops = append(b.ops, ir.Operation{Gate: gate.Reset, Qubits: []int{qubit}})
+	return b
+}
+
+// If adds a classically-conditioned gate. The gate is applied only when clbit == value.
+func (b *Builder) If(clbit, value int, g gate.Gate, qubits ...int) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if g == nil {
+		b.err = fmt.Errorf("gate is nil")
+		return b
+	}
+	if len(qubits) != g.Qubits() {
+		b.err = fmt.Errorf("gate %s requires %d qubits, got %d", g.Name(), g.Qubits(), len(qubits))
+		return b
+	}
+	b.validateClbit(clbit)
+	for _, q := range qubits {
+		b.validateQubit(q)
+	}
+	if b.err != nil {
+		return b
+	}
+	qs := make([]int, len(qubits))
+	copy(qs, qubits)
+	b.ops = append(b.ops, ir.Operation{
+		Gate:      g,
+		Qubits:    qs,
+		Condition: &ir.Condition{Clbit: clbit, Value: value},
+	})
+	return b
+}
+
+// IfBlock conditions multiple operations on clbit == value.
+// The function fn is called with a sub-builder; all ops added inside are conditioned.
+func (b *Builder) IfBlock(clbit, value int, fn func(*Builder)) *Builder {
+	if b.err != nil {
+		return b
+	}
+	b.validateClbit(clbit)
+	if b.err != nil {
+		return b
+	}
+	opsBefore := len(b.ops)
+	fn(b)
+	if b.err != nil {
+		return b
+	}
+	cond := &ir.Condition{Clbit: clbit, Value: value}
+	for i := opsBefore; i < len(b.ops); i++ {
+		b.ops[i].Condition = cond
+	}
+	return b
+}
+
 // Barrier adds a barrier instruction (no-op marker for transpilation).
 func (b *Builder) Barrier(qubits ...int) *Builder {
 	if b.err != nil {

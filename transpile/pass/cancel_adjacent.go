@@ -73,6 +73,7 @@ func cancelOnce(ops []ir.Operation, numQubits, numClbits int) ([]ir.Operation, b
 
 // findNextAdjacent finds the next operation that touches the same qubits as ops[i],
 // with no intervening operations on any of those qubits.
+// Does not cancel across measurement or reset boundaries.
 func findNextAdjacent(timelines []analysis.QubitTimeline, ops []ir.Operation, i int, removed []bool) int {
 	op := ops[i]
 	if len(op.Qubits) == 0 {
@@ -88,6 +89,10 @@ func findNextAdjacent(timelines []analysis.QubitTimeline, ops []ir.Operation, i 
 			next = analysis.NextOnQubit(timelines, q, next)
 		}
 		if next >= 0 {
+			// Check for measurement/reset between i and next on this qubit.
+			if hasMeasureOrResetBetween(timelines, ops, q, i, next, removed) {
+				continue
+			}
 			candidates[next]++
 		}
 	}
@@ -99,6 +104,27 @@ func findNextAdjacent(timelines []analysis.QubitTimeline, ops []ir.Operation, i 
 		}
 	}
 	return -1
+}
+
+// hasMeasureOrResetBetween checks if there is a measurement or reset on qubit q
+// between op indices start (exclusive) and end (exclusive).
+func hasMeasureOrResetBetween(timelines []analysis.QubitTimeline, ops []ir.Operation, q, start, end int, removed []bool) bool {
+	idx := analysis.NextOnQubit(timelines, q, start)
+	for idx >= 0 && idx < end {
+		if !removed[idx] {
+			op := ops[idx]
+			// Measurement: nil gate with clbits.
+			if op.Gate == nil && len(op.Clbits) > 0 {
+				return true
+			}
+			// Reset.
+			if op.Gate != nil && op.Gate.Name() == "reset" {
+				return true
+			}
+		}
+		idx = analysis.NextOnQubit(timelines, q, idx)
+	}
+	return false
 }
 
 var selfInverseGates = map[gate.Gate]bool{

@@ -36,6 +36,12 @@ func DecomposeToTarget(c *ir.Circuit, t target.Target) (*ir.Circuit, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Propagate condition from the original op to all decomposed sub-ops.
+		if op.Condition != nil {
+			for i := range decomposed {
+				decomposed[i].Condition = op.Condition
+			}
+		}
 		result = append(result, decomposed...)
 	}
 

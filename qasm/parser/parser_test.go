@@ -115,7 +115,10 @@ c[1] = measure q[1];
 		t.Fatal("Ops[2].Condition is nil, want non-nil")
 	}
 	if xOp.Condition.Register != "c" || xOp.Condition.Value != 1 {
-		t.Errorf("Condition = %+v, want {c, 1}", xOp.Condition)
+		t.Errorf("Condition = %+v, want {Register:c, Value:1}", xOp.Condition)
+	}
+	if xOp.Condition.Clbit != 0 {
+		t.Errorf("Condition.Clbit = %d, want 0", xOp.Condition.Clbit)
 	}
 }
 

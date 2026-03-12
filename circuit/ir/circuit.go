@@ -64,24 +64,37 @@ type Operation struct {
 	Condition *Condition // optional classical conditioning
 }
 
-// Condition represents classical control flow.
+// Condition represents classical control flow (single-bit equality).
 type Condition struct {
-	Register string
-	Value    int
+	Clbit    int    // classical bit index (authoritative for simulation)
+	Value    int    // expected value (0 or 1)
+	Register string // QASM register name (for emitter round-trip only)
 }
 
 // Stats returns circuit statistics.
 func (c *Circuit) Stats() Stats {
 	s := Stats{GateCount: len(c.ops)}
 	for _, op := range c.ops {
-		if op.Gate != nil && op.Gate.Qubits() >= 2 {
-			s.TwoQubitGates++
+		if op.Gate == nil && len(op.Clbits) > 0 {
+			s.Measurements++
 		}
-		if op.Gate != nil && len(op.Gate.Params()) > 0 {
-			s.Params += len(op.Gate.Params())
+		if op.Gate != nil {
+			if op.Gate.Qubits() >= 2 {
+				s.TwoQubitGates++
+			}
+			if len(op.Gate.Params()) > 0 {
+				s.Params += len(op.Gate.Params())
+			}
+			if op.Gate.Name() == "reset" {
+				s.Resets++
+			}
+		}
+		if op.Condition != nil {
+			s.ConditionalGates++
 		}
 	}
 	s.Depth = c.depth()
+	s.Dynamic = c.IsDynamic()
 	return s
 }
 
@@ -165,8 +178,37 @@ func FreeParameters(c *Circuit) []string {
 
 // Stats holds circuit statistics.
 type Stats struct {
-	Depth         int
-	GateCount     int
-	TwoQubitGates int
-	Params        int
+	Depth            int
+	GateCount        int
+	TwoQubitGates    int
+	Params           int
+	Measurements     int
+	Resets           int
+	ConditionalGates int
+	Dynamic          bool
+}
+
+// IsDynamic returns true if the circuit contains mid-circuit measurements,
+// conditioned gates, or reset operations.
+func (c *Circuit) IsDynamic() bool {
+	lastGateIdx := -1
+	for i := len(c.ops) - 1; i >= 0; i-- {
+		if c.ops[i].Gate != nil && c.ops[i].Gate.Name() != "barrier" && c.ops[i].Gate.Name() != "reset" {
+			lastGateIdx = i
+			break
+		}
+	}
+	for i, op := range c.ops {
+		if op.Condition != nil {
+			return true
+		}
+		if op.Gate != nil && op.Gate.Name() == "reset" {
+			return true
+		}
+		// Measurement before the last gate = mid-circuit measurement.
+		if op.Gate == nil && len(op.Clbits) > 0 && i < lastGateIdx {
+			return true
+		}
+	}
+	return false
 }
