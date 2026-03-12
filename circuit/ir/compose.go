@@ -23,10 +23,8 @@ func Compose(c1, c2 *Circuit, qubitMap, clbitMap map[int]int) (*Circuit, error) 
 				numQ = target + 1
 			}
 		}
-	} else {
-		if c2.NumQubits() > c1.NumQubits() {
-			return nil, fmt.Errorf("ir.Compose: c2 has %d qubits, exceeds c1's %d (provide qubitMap)", c2.NumQubits(), c1.NumQubits())
-		}
+	} else if c2.NumQubits() > c1.NumQubits() {
+		return nil, fmt.Errorf("ir.Compose: c2 has %d qubits, exceeds c1's %d (provide qubitMap)", c2.NumQubits(), c1.NumQubits())
 	}
 	if clbitMap != nil {
 		for _, target := range clbitMap {
@@ -37,10 +35,8 @@ func Compose(c1, c2 *Circuit, qubitMap, clbitMap map[int]int) (*Circuit, error) 
 				numC = target + 1
 			}
 		}
-	} else {
-		if c2.NumClbits() > c1.NumClbits() {
-			return nil, fmt.Errorf("ir.Compose: c2 has %d clbits, exceeds c1's %d (provide clbitMap)", c2.NumClbits(), c1.NumClbits())
-		}
+	} else if c2.NumClbits() > c1.NumClbits() {
+		return nil, fmt.Errorf("ir.Compose: c2 has %d clbits, exceeds c1's %d (provide clbitMap)", c2.NumClbits(), c1.NumClbits())
 	}
 
 	ops1 := c1.Ops()
