@@ -20,7 +20,8 @@ fi
 # Group changed directories by their nearest go.mod so each module is
 # vetted once with all its changed packages in a single invocation.
 echo "pre-commit: running go vet on changed packages..."
-declare -A MOD_PKGS  # mod_dir -> space-separated package paths
+# Build "mod_dir:pkg" pairs, then group by mod_dir without associative arrays.
+PAIRS=""
 for dir in $(echo "$STAGED_GO_FILES" | xargs -n1 dirname | sort -u); do
     mod_dir="$dir"
     while [ "$mod_dir" != "." ] && [ ! -f "$mod_dir/go.mod" ]; do
@@ -28,11 +29,11 @@ for dir in $(echo "$STAGED_GO_FILES" | xargs -n1 dirname | sort -u); do
     done
     rel="./${dir#"$mod_dir"}"
     [ "$rel" = "./" ] && rel="."
-    MOD_PKGS["$mod_dir"]+=" $rel"
+    PAIRS="$PAIRS
+$mod_dir:$rel"
 done
-for mod_dir in "${!MOD_PKGS[@]}"; do
-    # Deduplicate package paths within this module.
-    pkgs=$(echo "${MOD_PKGS[$mod_dir]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+for mod_dir in $(echo "$PAIRS" | cut -d: -f1 | sort -u | grep -v '^$'); do
+    pkgs=$(echo "$PAIRS" | grep "^${mod_dir}:" | cut -d: -f2 | sort -u | tr '\n' ' ')
     ( cd "$mod_dir" && go vet $pkgs )
 done
 

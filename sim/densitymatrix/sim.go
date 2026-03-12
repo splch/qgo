@@ -188,14 +188,25 @@ func (s *Sim) Fidelity(pureState []complex128) float64 {
 	return math.Abs(real(f))
 }
 
-// ExpectPauliString computes Tr(rho * P) for an arbitrary Pauli string P.
-// The result is real for Hermitian observables.
+// ExpectPauliString computes Re(Tr(ρ·P)) for a Pauli string P.
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.ExpectDM directly for complex128.
 func (s *Sim) ExpectPauliString(ps pauli.PauliString) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("densitymatrix: PauliString has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
 	return real(pauli.ExpectDM(s.rho, s.dim, ps))
 }
 
-// ExpectPauliSum computes Tr(rho * H) for a Hamiltonian H (sum of Pauli strings).
+// ExpectPauliSum computes Re(Tr(ρ·H)) for a Hamiltonian H (sum of Pauli strings).
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.ExpectSumDM directly for complex128.
 func (s *Sim) ExpectPauliSum(ps pauli.PauliSum) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("densitymatrix: PauliSum has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
 	return real(pauli.ExpectSumDM(s.rho, s.dim, ps))
 }
 

@@ -169,3 +169,25 @@ func TestExpect_ZI_Bell(t *testing.T) {
 	// <ZI>|Φ+> = <Z0>|Φ+> = 0
 	assertRealNear(t, "<ZI>|phi+>", Expect(bell, zi), 0)
 }
+
+func TestExpect_AllIdentity_Ket00(t *testing.T) {
+	ket00 := []complex128{1, 0, 0, 0}
+	iiOp, _ := Parse("II")
+	assertRealNear(t, "<II>|00>", Expect(ket00, iiOp), 1.0)
+}
+
+func TestExpect_ZII_Ket000(t *testing.T) {
+	// 3-qubit |000>: <ZII> = +1.0 (Z on qubit 0, identity on 1 and 2).
+	ket000 := make([]complex128, 8)
+	ket000[0] = 1
+	zii, _ := Parse("ZII")
+	assertRealNear(t, "<ZII>|000>", Expect(ket000, zii), 1.0)
+}
+
+func TestExpect_ComplexCoeff(t *testing.T) {
+	// PauliString with complex coefficient 1i on Z, applied to |0>.
+	// <0| (i*Z) |0> = i * <0|Z|0> = i * 1 = i.
+	ps := NewPauliString(1i, map[int]Pauli{0: Z}, 1)
+	got := Expect(ket0, ps)
+	assertNear(t, "<iZ>|0>", got, 1i)
+}

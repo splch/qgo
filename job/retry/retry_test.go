@@ -169,3 +169,50 @@ func TestCircuitBreakerHalfOpen(t *testing.T) {
 		t.Errorf("state = %q, want closed after success", cb.State())
 	}
 }
+
+func TestDo_MaxAttemptsZero(t *testing.T) {
+	p := Policy{
+		MaxAttempts:   0,
+		InitialDelay:  time.Millisecond,
+		MaxDelay:      time.Millisecond,
+		BackoffFactor: 1.0,
+	}
+	calls := 0
+	err := Do(context.Background(), p, func() error {
+		calls++
+		return nil
+	})
+	if calls != 0 {
+		t.Errorf("calls = %d, want 0 with MaxAttempts=0", calls)
+	}
+	// With 0 max attempts, the function is never called.
+	// The result depends on implementation - it might return nil or an error.
+	// Just verify the function was never called.
+	_ = err
+}
+
+func TestCircuitBreaker_HalfOpenFailure(t *testing.T) {
+	cb := NewCircuitBreaker(1, 10*time.Millisecond)
+	cb.RecordFailure()
+	if cb.State() != "open" {
+		t.Fatalf("state = %q, want open", cb.State())
+	}
+
+	// Wait for reset period.
+	time.Sleep(20 * time.Millisecond)
+	if !cb.Allow() {
+		t.Fatal("should allow in half-open state")
+	}
+	if cb.State() != "half-open" {
+		t.Fatalf("state = %q, want half-open", cb.State())
+	}
+
+	// Failure in half-open should go back to open.
+	cb.RecordFailure()
+	if cb.State() != "open" {
+		t.Errorf("state = %q, want open after half-open failure", cb.State())
+	}
+	if cb.Allow() {
+		t.Error("should not allow after returning to open")
+	}
+}

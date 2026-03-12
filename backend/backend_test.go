@@ -117,3 +117,38 @@ func TestResultToProbabilitiesEmpty(t *testing.T) {
 		t.Errorf("ToProbabilities on empty result = %v, want nil", probs)
 	}
 }
+
+func TestToCounts_ProbSumNot1(t *testing.T) {
+	r := &Result{
+		Probabilities: map[string]float64{"00": 0.5, "11": 0.3},
+		Shots:         100,
+	}
+	counts := r.ToCounts()
+	total := 0
+	for _, c := range counts {
+		total += c
+	}
+	if total != 82 {
+		t.Errorf("ToCounts total = %d, want 82", total)
+	}
+}
+
+func TestToCounts_NegativeShots(t *testing.T) {
+	r := &Result{
+		Probabilities: map[string]float64{"00": 0.5, "11": 0.5},
+		Shots:         -1,
+	}
+	if counts := r.ToCounts(); counts != nil {
+		t.Errorf("ToCounts with negative shots = %v, want nil", counts)
+	}
+}
+
+func TestToProbabilities_AllZeroCounts(t *testing.T) {
+	r := &Result{
+		Counts: map[string]int{"00": 0, "11": 0},
+		Shots:  100,
+	}
+	if probs := r.ToProbabilities(); probs != nil {
+		t.Errorf("ToProbabilities with all zero counts = %v, want nil", probs)
+	}
+}

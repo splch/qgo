@@ -199,14 +199,25 @@ func optimalWorkers(nQubits int) int {
 	return maxByWork
 }
 
-// ExpectPauliString computes <psi|P|psi> for an arbitrary Pauli string P.
-// The result is real for Hermitian observables.
+// ExpectPauliString computes Re(⟨psi|P|psi⟩) for a Pauli string P.
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.Expect directly for complex128.
 func (s *Sim) ExpectPauliString(ps pauli.PauliString) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("statevector: PauliString has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
 	return real(pauli.Expect(s.state, ps))
 }
 
-// ExpectPauliSum computes <psi|H|psi> for a Hamiltonian H (sum of Pauli strings).
+// ExpectPauliSum computes Re(⟨psi|H|psi⟩) for a Hamiltonian H (sum of Pauli strings).
+// For Hermitian observables (real coefficients), the imaginary part is zero.
+// For non-Hermitian observables, use pauli.ExpectSum directly for complex128.
 func (s *Sim) ExpectPauliSum(ps pauli.PauliSum) float64 {
+	if ps.NumQubits() != s.numQubits {
+		panic(fmt.Sprintf("statevector: PauliSum has %d qubits, simulator has %d",
+			ps.NumQubits(), s.numQubits))
+	}
 	return real(pauli.ExpectSum(s.state, ps))
 }
 

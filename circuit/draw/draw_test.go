@@ -249,3 +249,22 @@ func TestTenQubits(t *testing.T) {
 		t.Errorf("expected q9 label:\n%s", got)
 	}
 }
+
+func TestWithMaxLabelWidth_One(t *testing.T) {
+	c, err := builder.New("rz", 1).RZ(math.Pi/7, 0).Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := String(c, WithMaxLabelWidth(1))
+	if got == "" {
+		t.Error("expected non-empty output")
+	}
+}
+
+func TestEmptyQubitsOp(t *testing.T) {
+	// Op with nil qubits — should not panic.
+	c := ir.New("noop", 1, 0, []ir.Operation{{Gate: gate.H, Qubits: nil}}, nil)
+	got := String(c)
+	// Just verify no panic, output can be anything.
+	_ = got
+}

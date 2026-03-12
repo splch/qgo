@@ -185,3 +185,36 @@ func TestCancelAdjacentEmptyCircuit(t *testing.T) {
 		t.Errorf("expected 0 ops for empty circuit, got %d", len(result.Ops()))
 	}
 }
+
+func TestCancelAdjacentCascading(t *testing.T) {
+	ops := []ir.Operation{
+		{Gate: gate.H, Qubits: []int{0}},
+		{Gate: gate.H, Qubits: []int{0}},
+		{Gate: gate.H, Qubits: []int{0}},
+		{Gate: gate.H, Qubits: []int{0}},
+	}
+	c := ir.New("hhhh", 1, 0, ops, nil)
+	result, err := CancelAdjacent(c, target.Simulator)
+	if err != nil {
+		t.Fatalf("CancelAdjacent: %v", err)
+	}
+	if len(result.Ops()) != 0 {
+		t.Errorf("expected 0 ops after H H H H cancellation, got %d", len(result.Ops()))
+	}
+}
+
+func TestCancelAdjacentTriple(t *testing.T) {
+	ops := []ir.Operation{
+		{Gate: gate.H, Qubits: []int{0}},
+		{Gate: gate.H, Qubits: []int{0}},
+		{Gate: gate.H, Qubits: []int{0}},
+	}
+	c := ir.New("hhh", 1, 0, ops, nil)
+	result, err := CancelAdjacent(c, target.Simulator)
+	if err != nil {
+		t.Fatalf("CancelAdjacent: %v", err)
+	}
+	if len(result.Ops()) != 1 {
+		t.Errorf("expected 1 op after H H H cancellation, got %d", len(result.Ops()))
+	}
+}

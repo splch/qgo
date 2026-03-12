@@ -137,3 +137,31 @@ func TestExpectSumDM(t *testing.T) {
 		t.Errorf("ExpectSumDM = %v, want 0.5", got)
 	}
 }
+
+func TestExpectDM_AllIdentity_Ket00(t *testing.T) {
+	ket00 := []complex128{1, 0, 0, 0}
+	rho, dim := pureStateDM(ket00)
+	iiOp, _ := Parse("II")
+	got := ExpectDM(rho, dim, iiOp)
+	if math.Abs(real(got)-1.0) > eps || math.Abs(imag(got)) > eps {
+		t.Errorf("ExpectDM<II>|00> = %v, want 1.0", got)
+	}
+}
+
+func TestExpectDM_SingleQubit_Z_Ket0(t *testing.T) {
+	rho, dim := pureStateDM(ket0)
+	zOp, _ := Parse("Z")
+	got := ExpectDM(rho, dim, zOp)
+	if math.Abs(real(got)-1.0) > eps || math.Abs(imag(got)) > eps {
+		t.Errorf("ExpectDM<Z>|0> = %v, want 1.0", got)
+	}
+}
+
+func TestExpectDM_ComplexCoeff(t *testing.T) {
+	// PauliString with complex coefficient 1i on Z, applied to |0><0|.
+	// Tr(ρ · (i*Z)) = i * Tr(|0><0| · Z) = i * 1 = i.
+	rho, dim := pureStateDM(ket0)
+	ps := NewPauliString(1i, map[int]Pauli{0: Z}, 1)
+	got := ExpectDM(rho, dim, ps)
+	assertNear(t, "<iZ>|0> DM", got, 1i)
+}

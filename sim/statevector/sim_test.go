@@ -7,6 +7,7 @@ import (
 
 	"github.com/splch/qgo/circuit/builder"
 	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/qgo/sim/pauli"
 )
 
 const eps = 1e-10
@@ -590,5 +591,107 @@ func BenchmarkMS16(b *testing.B) {
 	for range b.N {
 		sim.state[0] = 1
 		sim.Evolve(c)
+	}
+}
+
+func TestRun_ZeroShots(t *testing.T) {
+	c, err := builder.New("x", 1).X(0).MeasureAll().Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sim := New(1)
+	counts, err := sim.Run(c, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(counts) != 0 {
+		t.Errorf("expected empty counts for 0 shots, got %v", counts)
+	}
+}
+
+func TestEvolve_EmptyCircuit(t *testing.T) {
+	c, err := builder.New("empty", 2).Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sim := New(2)
+	if err := sim.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	sv := sim.StateVector()
+	if cmplx.Abs(sv[0]-1) > eps {
+		t.Errorf("sv[0] = %v, want 1", sv[0])
+	}
+	for i := 1; i < len(sv); i++ {
+		if cmplx.Abs(sv[i]) > eps {
+			t.Errorf("sv[%d] = %v, want 0", i, sv[i])
+		}
+	}
+}
+
+func TestExpectPauliString_MismatchedQubits(t *testing.T) {
+	c, err := builder.New("id", 2).Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sim := New(2)
+	if err := sim.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	ps := pauli.NewPauliString(1.0, map[int]pauli.Pauli{0: pauli.Z}, 3)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for mismatched qubit count")
+		}
+	}()
+	sim.ExpectPauliString(ps)
+}
+
+func TestExpectPauliSum_MismatchedQubits(t *testing.T) {
+	c, err := builder.New("id", 2).Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sim := New(2)
+	if err := sim.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	ps := pauli.NewPauliString(1.0, map[int]pauli.Pauli{0: pauli.Z}, 3)
+	sum, err := pauli.NewPauliSum([]pauli.PauliString{ps})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for mismatched qubit count")
+		}
+	}()
+	sim.ExpectPauliSum(sum)
+}
+
+func TestParallelThreshold_17Q(t *testing.T) {
+	c, err := builder.New("par17", 17).
+		H(0).
+		CNOT(0, 1).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sim := New(17)
+	if err := sim.Evolve(c); err != nil {
+		t.Fatal(err)
+	}
+	sv := sim.StateVector()
+	s2 := 1.0 / math.Sqrt2
+
+	// |00...0> = index 0
+	if math.Abs(cmplx.Abs(sv[0])-s2) > eps {
+		t.Errorf("|sv[0]| = %f, want %f", cmplx.Abs(sv[0]), s2)
+	}
+	// |11...0> = bit0=1, bit1=1 = index 3
+	if math.Abs(cmplx.Abs(sv[3])-s2) > eps {
+		t.Errorf("|sv[3]| = %f, want %f", cmplx.Abs(sv[3]), s2)
 	}
 }

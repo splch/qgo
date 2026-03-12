@@ -293,3 +293,19 @@ func TestKAK_ThreeCNOT_KnownGates(t *testing.T) {
 		})
 	}
 }
+
+func TestKAK_DiagonalCP_SmallAngle(t *testing.T) {
+	// CP with very small angle — tests numerical stability near identity.
+	m := gate.CP(0.001).Matrix()
+	ops := KAK(m, 0, 1)
+	cx := countCNOTs(ops)
+	if cx > 3 {
+		t.Errorf("KAK(CP(0.001)): used %d CNOTs, max should be 3", cx)
+	}
+	if len(ops) > 0 {
+		got := kakCircuitUnitary(ops, 0, 1)
+		if _, ok := GlobalPhase(got, m, kakTol); !ok {
+			t.Error("KAK(CP(0.001)): reconstructed unitary does not match")
+		}
+	}
+}

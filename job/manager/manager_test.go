@@ -171,3 +171,28 @@ func TestConcurrencyLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestSubmitBatch_EmptyBackends(t *testing.T) {
+	m := New(WithPollFrequency(time.Millisecond))
+	ch := m.SubmitBatch(context.Background(), []string{}, &backend.SubmitRequest{})
+	count := 0
+	for range ch {
+		count++
+	}
+	if count != 0 {
+		t.Errorf("got %d results from empty batch, want 0", count)
+	}
+}
+
+func TestWatch_NonexistentBackend(t *testing.T) {
+	m := New(WithPollFrequency(time.Millisecond))
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	ch := m.Watch(ctx, "nonexistent", "fake-job-id")
+	count := 0
+	for range ch {
+		count++
+	}
+	// Channel should close quickly (either with error status or empty).
+	// Just verify it closes within timeout and doesn't hang.
+}

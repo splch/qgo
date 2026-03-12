@@ -36,3 +36,16 @@ func TestVectorPanics(t *testing.T) {
 	}()
 	v.At(5)
 }
+
+func TestNewVector_SizeZero(t *testing.T) {
+	v := NewVector("x", 0)
+	if v.Size() != 0 {
+		t.Errorf("Size() = %d, want 0", v.Size())
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for At(0) on zero-size vector")
+		}
+	}()
+	v.At(0)
+}

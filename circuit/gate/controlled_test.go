@@ -202,3 +202,20 @@ func TestControlled2QInner(t *testing.T) {
 		}
 	}
 }
+
+func TestControlled_10Qubits_Matrix(t *testing.T) {
+	g := gate.Controlled(gate.X, 9) // 9 controls + 1 target = 10 qubits
+	m := g.Matrix()
+	dim := 1 << 10
+	if len(m) != dim*dim {
+		t.Errorf("Matrix() length = %d, want %d", len(m), dim*dim)
+	}
+}
+
+func TestControlledDecompose(t *testing.T) {
+	g := gate.Controlled(gate.H, 2) // C2-H
+	applied := g.Decompose([]int{0, 1, 2})
+	if applied != nil {
+		t.Error("Decompose expected to return nil for controlled gate")
+	}
+}
