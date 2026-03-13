@@ -31,4 +31,8 @@
 //   - [algorithm/textbook] — Bernstein-Vazirani, Deutsch-Jozsa, Simon's
 //   - [algorithm/shor] — Shor's factoring algorithm
 //   - [algorithm/hhl] — HHL linear systems solver
+//
+// Error mitigation:
+//
+//   - [algorithm/mitigation] — Zero-Noise Extrapolation (ZNE) and measurement error mitigation
 package algorithm
