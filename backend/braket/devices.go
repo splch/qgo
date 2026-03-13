@@ -14,7 +14,7 @@ var deviceARNs = map[string]string{
 var deviceTargets = map[string]target.Target{
 	"ionq.forte":    target.IonQForte,
 	"iqm.garnet":    iqmGarnet,
-	"rigetti.ankaa": rigettiAnkaa,
+	"rigetti.ankaa": target.RigettiAnkaa,
 	"sv1":           target.Simulator,
 }
 
@@ -22,12 +22,6 @@ var iqmGarnet = target.Target{
 	Name:       "iqm.garnet",
 	NumQubits:  20,
 	BasisGates: []string{"CZ", "RX", "RY", "RZ"},
-}
-
-var rigettiAnkaa = target.Target{
-	Name:       "rigetti.ankaa",
-	NumQubits:  84,
-	BasisGates: []string{"CZ", "RX", "RZ"},
 }
 
 // DeviceARN returns the full ARN for a short device name.

@@ -252,7 +252,8 @@ func TestPredefinedTargets(t *testing.T) {
 		{IonQForte, "IonQ Forte", 36},
 		{IonQAria, "IonQ Aria", 25},
 		{IBMEagle, "IBM Eagle", 127},
-		{Quantinuum, "Quantinuum H1", 32},
+		{Quantinuum, "Quantinuum H1", 20},
+		{QuantinuumH2, "Quantinuum H2", 56},
 		{Simulator, "Simulator", 28},
 	}
 	for _, tt := range targets {
