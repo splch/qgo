@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
-	"github.com/splch/qgo/transpile/analysis"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
+	"github.com/splch/goqu/transpile/analysis"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // MergeRotations merges consecutive same-axis rotations on the same qubit.

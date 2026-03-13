@@ -6,8 +6,8 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 const kakTol = 1e-6

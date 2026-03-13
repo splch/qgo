@@ -6,12 +6,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/circuit/param"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/sim/noise"
-	"github.com/splch/qgo/sweep"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/circuit/param"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/sim/noise"
+	"github.com/splch/goqu/sweep"
 )
 
 func buildRYCircuit(t *testing.T) *ir.Circuit {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
-	"github.com/splch/qgo/sim/pulsesim"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
+	"github.com/splch/goqu/sim/pulsesim"
 )
 
 func ExampleSim_Evolve() {

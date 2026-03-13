@@ -5,9 +5,9 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/sim/pauli"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/sim/pauli"
 )
 
 const eps = 1e-10

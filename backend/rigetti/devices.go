@@ -1,6 +1,6 @@
 package rigetti
 
-import "github.com/splch/qgo/transpile/target"
+import "github.com/splch/goqu/transpile/target"
 
 // processorTargets maps QCS processor IDs to transpilation targets.
 var processorTargets = map[string]target.Target{

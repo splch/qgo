@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 func TestSubmitBellState(t *testing.T) {

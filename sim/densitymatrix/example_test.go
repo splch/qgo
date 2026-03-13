@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/sim/densitymatrix"
-	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/sim/densitymatrix"
+	"github.com/splch/goqu/sim/noise"
 )
 
 func Example_noisyBell() {

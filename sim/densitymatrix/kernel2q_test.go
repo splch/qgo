@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 func TestGate2ColsParallel_CNOT9Q(t *testing.T) {

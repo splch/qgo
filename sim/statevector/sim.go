@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/sim/pauli"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/sim/pauli"
 )
 
 // Sim simulates a circuit via full statevector evolution.

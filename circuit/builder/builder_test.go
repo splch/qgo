@@ -5,8 +5,8 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 func TestBellCircuit(t *testing.T) {

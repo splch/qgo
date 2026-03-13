@@ -1,7 +1,7 @@
-module github.com/splch/qgo/backend/rigetti
+module github.com/splch/goqu/backend/rigetti
 
 go 1.24
 
-require github.com/splch/qgo v0.0.0
+require github.com/splch/goqu v0.0.0
 
-replace github.com/splch/qgo => ../../
+replace github.com/splch/goqu => ../../

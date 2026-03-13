@@ -1,9 +1,9 @@
-module github.com/splch/qgo/observe/otelbridge
+module github.com/splch/goqu/observe/otelbridge
 
 go 1.24
 
 require (
-	github.com/splch/qgo v0.0.0
+	github.com/splch/goqu v0.0.0
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 )
@@ -15,4 +15,4 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 )
 
-replace github.com/splch/qgo => ../../
+replace github.com/splch/goqu => ../../

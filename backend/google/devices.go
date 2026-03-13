@@ -1,6 +1,6 @@
 package google
 
-import "github.com/splch/qgo/transpile/target"
+import "github.com/splch/goqu/transpile/target"
 
 // Processor name constants.
 const (

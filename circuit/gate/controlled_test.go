@@ -5,7 +5,7 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 func TestControlledSingletonReturns(t *testing.T) {

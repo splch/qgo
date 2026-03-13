@@ -1,4 +1,4 @@
-// Package prombridge provides Prometheus metric hooks for qgo operations.
+// Package prombridge provides Prometheus metric hooks for goqu operations.
 package prombridge
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/splch/qgo/observe"
+	"github.com/splch/goqu/observe"
 )
 
 // NewHooks returns observe.Hooks that record Prometheus metrics.
@@ -18,59 +18,59 @@ func NewHooks(reg prometheus.Registerer) *observe.Hooks {
 	f := promauto.With(reg)
 
 	transpileDuration := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_transpile_duration_seconds",
+		Name:    "goqu_transpile_duration_seconds",
 		Help:    "Time spent transpiling circuits.",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"level"})
 
 	transpilePassDuration := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_transpile_pass_duration_seconds",
+		Name:    "goqu_transpile_pass_duration_seconds",
 		Help:    "Time spent in individual transpilation passes.",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"pass"})
 
 	transpileGateReduction := f.NewHistogram(prometheus.HistogramOpts{
-		Name:    "qgo_transpile_gate_reduction_ratio",
+		Name:    "goqu_transpile_gate_reduction_ratio",
 		Help:    "Ratio of output to input gate count per transpilation.",
 		Buckets: prometheus.LinearBuckets(0, 0.1, 20),
 	})
 
 	circuitDepth := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_circuit_depth",
+		Name:    "goqu_circuit_depth",
 		Help:    "Circuit depth before and after transpilation.",
 		Buckets: prometheus.ExponentialBuckets(1, 2, 15),
 	}, []string{"stage"})
 
 	jobsSubmitted := f.NewCounterVec(prometheus.CounterOpts{
-		Name: "qgo_jobs_submitted_total",
+		Name: "goqu_jobs_submitted_total",
 		Help: "Total jobs submitted, labeled by backend.",
 	}, []string{"backend"})
 
 	jobsDuration := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_jobs_duration_seconds",
+		Name:    "goqu_jobs_duration_seconds",
 		Help:    "End-to-end job duration (submit to result).",
 		Buckets: prometheus.ExponentialBuckets(0.01, 2, 15),
 	}, []string{"backend"})
 
 	backendErrors := f.NewCounterVec(prometheus.CounterOpts{
-		Name: "qgo_backend_errors_total",
+		Name: "goqu_backend_errors_total",
 		Help: "Backend errors, labeled by backend.",
 	}, []string{"backend"})
 
 	simDuration := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_sim_duration_seconds",
+		Name:    "goqu_sim_duration_seconds",
 		Help:    "Simulation execution time.",
 		Buckets: prometheus.ExponentialBuckets(0.0001, 2, 20),
 	}, []string{"qubits"})
 
 	httpDuration := f.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "qgo_http_duration_seconds",
+		Name:    "goqu_http_duration_seconds",
 		Help:    "Backend HTTP request duration.",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"backend", "method", "status"})
 
 	jobQueuePosition := f.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "qgo_job_queue_position",
+		Name: "goqu_job_queue_position",
 		Help: "Current queue position for active jobs.",
 	}, []string{"backend", "job_id"})
 

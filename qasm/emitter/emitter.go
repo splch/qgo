@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/piformat"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/piformat"
 )
 
 // Option configures emitter behavior.

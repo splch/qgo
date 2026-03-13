@@ -12,8 +12,8 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/transpile/target"
 )
 
 var _ backend.Backend = (*Backend)(nil)
@@ -155,7 +155,7 @@ func (b *Backend) Submit(ctx context.Context, req *backend.SubmitRequest) (*back
 
 	// Step 1: Create Program.
 	programBody := &programRequest{
-		Name: fmt.Sprintf("projects/%s/programs/qgo-%s", b.projectID, req.Name),
+		Name: fmt.Sprintf("projects/%s/programs/goqu-%s", b.projectID, req.Name),
 		Code: programCode{
 			TypeURL: "type.googleapis.com/cirq.google.api.v2.Program",
 			Value:   base64.StdEncoding.EncodeToString(programJSON),

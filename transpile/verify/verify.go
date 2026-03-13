@@ -6,9 +6,9 @@ import (
 	"math"
 	"math/cmplx"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 // EquivalentOnZero checks if two circuits produce equivalent statevectors

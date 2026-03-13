@@ -3,9 +3,9 @@ package decompose
 import (
 	"math"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
 )
 
 // DecomposeByRule returns a basis-gate decomposition for known gates.

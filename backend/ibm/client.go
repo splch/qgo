@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/splch/qgo/observe"
+	"github.com/splch/goqu/observe"
 )
 
 const (
 	defaultBaseURL    = "https://quantum.cloud.ibm.com/api/v1"
 	defaultAPIVersion = "2025-09-01"
-	userAgent         = "qgo/0.1.0"
+	userAgent         = "goqu/0.1.0"
 )
 
 type httpClient struct {

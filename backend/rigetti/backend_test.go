@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/backend/rigetti/internal/qcs"
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/backend/rigetti/internal/qcs"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // mockTranslation implements translationAPI for testing.

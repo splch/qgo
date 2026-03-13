@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/backend/rigetti/internal/qcs"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/quil/emitter"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/backend/rigetti/internal/qcs"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/quil/emitter"
 )
 
 // serializeCircuit converts a circuit IR to a Quil string

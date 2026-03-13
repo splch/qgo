@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // dispatchGate2 selects an optimized kernel for the given 2-qubit gate.

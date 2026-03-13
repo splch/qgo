@@ -4,9 +4,9 @@ package builder
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/circuit/param"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/circuit/param"
 )
 
 // Builder accumulates operations and produces an immutable Circuit.

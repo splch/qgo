@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 func TestIntegrationSyntaxChecker(t *testing.T) {
@@ -37,7 +37,7 @@ func TestIntegrationSyntaxChecker(t *testing.T) {
 	job, err := b.Submit(ctx, &backend.SubmitRequest{
 		Circuit: c,
 		Shots:   10,
-		Name:    "qgo-integration-test",
+		Name:    "goqu-integration-test",
 	})
 	if err != nil {
 		t.Fatal(err)

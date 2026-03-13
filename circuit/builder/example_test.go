@@ -3,7 +3,7 @@ package builder_test
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 func ExampleBuilder_bell() {

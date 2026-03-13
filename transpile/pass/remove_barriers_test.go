@@ -3,9 +3,9 @@ package pass
 import (
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/transpile/target"
 )
 
 func TestRemoveBarriers(t *testing.T) {

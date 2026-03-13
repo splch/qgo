@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 // nativeGates are IonQ hardware-level gate names.

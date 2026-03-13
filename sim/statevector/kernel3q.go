@@ -3,7 +3,7 @@ package statevector
 import (
 	"sync"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // dispatchGate3 selects an optimized kernel for the given 3-qubit gate.

@@ -3,7 +3,7 @@ package param
 import (
 	"fmt"
 
-	"github.com/splch/qgo/internal/piformat"
+	"github.com/splch/goqu/internal/piformat"
 )
 
 // Expr represents a symbolic expression over parameters.

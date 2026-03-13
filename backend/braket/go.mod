@@ -1,4 +1,4 @@
-module github.com/splch/qgo/backend/braket
+module github.com/splch/goqu/backend/braket
 
 go 1.24
 
@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/service/braket v1.39.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
-	github.com/splch/qgo v0.0.0
+	github.com/splch/goqu v0.0.0
 )
 
 require (
@@ -21,4 +21,4 @@ require (
 	github.com/aws/smithy-go v1.24.2 // indirect
 )
 
-replace github.com/splch/qgo => ../../
+replace github.com/splch/goqu => ../../

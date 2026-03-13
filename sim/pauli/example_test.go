@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/sim/pauli"
+	"github.com/splch/goqu/sim/pauli"
 )
 
 func ExampleExpect_bell() {

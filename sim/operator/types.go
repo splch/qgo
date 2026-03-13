@@ -1,6 +1,6 @@
 package operator
 
-import "github.com/splch/qgo/sim/noise"
+import "github.com/splch/goqu/sim/noise"
 
 // Kraus represents a quantum channel via Kraus operators.
 // Each operator is a dim x dim flat row-major complex matrix where dim = 2^nq.

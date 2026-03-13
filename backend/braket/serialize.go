@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/qasm/emitter"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/qasm/emitter"
 )
 
 // braketProgram is the Braket OpenQASM IR schema wrapper.

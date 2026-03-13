@@ -1,7 +1,7 @@
 package noise
 
 import (
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // CalibrationData contains hardware calibration parameters for building device noise models.

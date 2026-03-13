@@ -4,7 +4,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/splch/qgo/qasm/token"
+	"github.com/splch/goqu/qasm/token"
 )
 
 // lexer tokenizes OpenQASM 3.0 source.

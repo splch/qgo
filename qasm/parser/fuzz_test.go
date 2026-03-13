@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/splch/qgo/qasm/emitter"
+	"github.com/splch/goqu/qasm/emitter"
 )
 
 func seedFromTestdata(f *testing.F) {

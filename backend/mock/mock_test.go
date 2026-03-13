@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/splch/qgo/backend"
+	"github.com/splch/goqu/backend"
 )
 
 func TestDefaultBehavior(t *testing.T) {

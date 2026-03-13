@@ -4,11 +4,11 @@ import (
 	"math"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 // test hardware configuration

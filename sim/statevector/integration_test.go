@@ -5,7 +5,7 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/qasm/parser"
+	"github.com/splch/goqu/qasm/parser"
 )
 
 // TestEndToEnd_BellQASM: parse QASM → simulate → verify statevector.

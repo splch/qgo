@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
-	"github.com/splch/qgo/pulse"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
+	"github.com/splch/goqu/pulse"
 )
 
 // ProgramFunc constructs a pulse program for a gate.

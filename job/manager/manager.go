@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/sweep"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/sweep"
 )
 
 // Manager handles concurrent job submission, polling, and result retrieval.

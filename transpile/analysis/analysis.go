@@ -1,7 +1,7 @@
 // Package analysis provides circuit analysis helpers for transpilation passes.
 package analysis
 
-import "github.com/splch/qgo/circuit/ir"
+import "github.com/splch/goqu/circuit/ir"
 
 // QubitTimeline tracks the operation indices that touch a given qubit.
 type QubitTimeline struct {

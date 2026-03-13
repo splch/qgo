@@ -3,7 +3,7 @@ package noise
 import (
 	"testing"
 
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/transpile/target"
 )
 
 func TestFromTargetSimple(t *testing.T) {

@@ -1,9 +1,9 @@
-module github.com/splch/qgo/backend/google
+module github.com/splch/goqu/backend/google
 
 go 1.24
 
 require (
-	github.com/splch/qgo v0.0.0
+	github.com/splch/goqu v0.0.0
 	golang.org/x/oauth2 v0.28.0
 )
 
@@ -12,4 +12,4 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 )
 
-replace github.com/splch/qgo => ../../
+replace github.com/splch/goqu => ../../

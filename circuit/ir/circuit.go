@@ -4,7 +4,7 @@ package ir
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // Circuit is an immutable sequence of quantum operations with metadata.

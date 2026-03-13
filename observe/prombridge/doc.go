@@ -1,7 +1,7 @@
 // Package prombridge provides an [observe.Hooks] implementation that records
-// Prometheus metrics for all qgo operations.
+// Prometheus metrics for all goqu operations.
 //
-// This is a separate Go module with external dependencies. Core qgo packages
+// This is a separate Go module with external dependencies. Core goqu packages
 // never import it — applications opt in by attaching the hooks to context:
 //
 //	hooks := prombridge.NewHooks(prometheus.DefaultRegisterer)

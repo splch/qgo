@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 // FuzzEvolve builds random 1-2 qubit pulse programs, evolves them, and

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 const tol = 1e-10

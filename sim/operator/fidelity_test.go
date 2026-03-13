@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/goqu/sim/noise"
 )
 
 func TestAverageGateFidelity_Identity(t *testing.T) {

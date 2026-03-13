@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 func buildRandomProgram(nPorts, nFrames, nInstrs int, seed uint32) (*pulse.Program, error) {

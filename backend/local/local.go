@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/sim/pulsesim"
-	"github.com/splch/qgo/sim/statevector"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/sim/pulsesim"
+	"github.com/splch/goqu/sim/statevector"
+	"github.com/splch/goqu/transpile/target"
 )
 
 var _ backend.Backend = (*Backend)(nil)
