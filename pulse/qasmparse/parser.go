@@ -603,10 +603,11 @@ func (p *parser) tryParseComplex() (complex128, bool) {
 
 	// Optional sign for real part.
 	realSign := 1.0
-	if p.cur.typ == tokMINUS {
+	switch p.cur.typ {
+	case tokMINUS:
 		realSign = -1.0
 		p.advance()
-	} else if p.cur.typ == tokPLUS {
+	case tokPLUS:
 		p.advance()
 	}
 

@@ -40,9 +40,9 @@ func (l *lexer) peek() rune {
 	return l.src[l.pos]
 }
 
-func (l *lexer) advance() rune {
+func (l *lexer) advance() {
 	if l.pos >= len(l.src) {
-		return 0
+		return
 	}
 	ch := l.src[l.pos]
 	l.pos++
@@ -52,7 +52,6 @@ func (l *lexer) advance() rune {
 	} else {
 		l.col++
 	}
-	return ch
 }
 
 func (l *lexer) skipWhitespace() {

@@ -28,7 +28,7 @@ func WithCRFrames(cr CRFrameMap) Option {
 }
 
 // orderedPair returns a normalized [2]int with the smaller index first.
-func orderedPair(q0, q1 int) [2]int {
+func orderedPair(q0, q1 int) [2]int { //nolint:unparam // public helper; callers currently happen to use (0,1)
 	if q0 <= q1 {
 		return [2]int{q0, q1}
 	}
