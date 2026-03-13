@@ -180,17 +180,15 @@ func isCliffordGate(g gate.Gate) bool {
 		return true
 	}
 
-	// For parameterized gates, check if all params are multiples of π/2.
+	// For known single-axis rotations, check if the parameter is a multiple of π/2.
 	params := g.Params()
-	if len(params) > 0 {
-		for _, p := range params {
-			// Normalize to multiples of π/2.
-			normalized := p / (math.Pi / 2)
-			if math.Abs(normalized-math.Round(normalized)) > 1e-10 {
-				return false
-			}
+	if len(params) == 1 {
+		name := g.Name()
+		isRotation := (len(name) >= 2 && (name[:2] == "RX" || name[:2] == "RY" || name[:2] == "RZ")) || name == "Phase"
+		if isRotation {
+			normalized := params[0] / (math.Pi / 2)
+			return math.Abs(normalized-math.Round(normalized)) <= 1e-10
 		}
-		return true
 	}
 
 	return false
@@ -234,17 +232,7 @@ func nearestClifford(g gate.Gate) gate.Gate {
 	case name[0] == 'P': // Phase gate
 		return rzClifford(k)
 	default:
-		// Generic: round all params to nearest kπ/2.
-		newParams := make([]float64, len(params))
-		for i, p := range params {
-			rounded := math.Round(p/(math.Pi/2)) * (math.Pi / 2)
-			newParams[i] = rounded
-		}
-		// Reconstruct based on gate type.
-		if len(name) >= 2 && name[:2] == "RZ" {
-			return gate.RZ(newParams[0])
-		}
-		return gate.RZ(newParams[0]) // fallback
+		return g // unrecognized parameterized gate, return as-is
 	}
 }
 

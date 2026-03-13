@@ -95,28 +95,29 @@ func RunPEC(ctx context.Context, cfg PECConfig) (*PECResult, error) {
 		d.nq = nq
 
 		if nq == 1 {
-			// 1Q depolarizing: η₀ = (1-p/2)/(1-4p/3), ηₖ = -(p/6)/(1-4p/3)
+			// 1Q depolarizing: inverse channel quasi-probability decomposition.
+			// Pauli eigenvalue λ = 1-4p/3.
+			// η₀ = (1-p/3)/(1-4p/3), ηₖ = -(p/3)/(1-4p/3) for k=1,2,3.
 			denom := 1 - 4*p/3
 			if math.Abs(denom) < 1e-15 {
 				return nil, fmt.Errorf("mitigation.RunPEC: depolarizing parameter p=%.4f too large", p)
 			}
-			eta0 := (1 - p/2) / denom
-			etak := -(p / 6) / denom
+			eta0 := (1 - p/3) / denom
+			etak := -(p / 3) / denom
 			d.eta = []float64{eta0, etak, etak, etak}
 			d.pauli = []gate.Gate{gate.I, gate.X, gate.Y, gate.Z}
 			d.gamma = math.Abs(eta0) + 3*math.Abs(etak)
 		} else {
-			// 2Q depolarizing: η₀ = (1-p·8/15)/(1-16p/15), ηₖ = -(p/30)/(1-16p/15) for k≠0
-			// Actually: for 2Q depolarizing with parameter p:
-			// Kraus[0] = sqrt(1-p)·I⊗I, Kraus[k] = sqrt(p/15)·(Pa⊗Pb) for k=1..15
-			// Inverse channel quasi-prob:
-			// η₀ = (1-p·8/15)/(1-16p/15), ηₖ = -(p/30)/(1-16p/15) for k=1..15
+			// 2Q depolarizing: inverse channel quasi-probability decomposition.
+			// Kraus[0] = sqrt(1-p)·I⊗I, Kraus[k] = sqrt(p/15)·P_k for k=1..15.
+			// Pauli eigenvalue λ = 1-16p/15.
+			// η₀ = (1-p/15)/(1-16p/15), ηₖ = -(p/15)/(1-16p/15) for k=1..15.
 			denom := 1 - 16*p/15
 			if math.Abs(denom) < 1e-15 {
 				return nil, fmt.Errorf("mitigation.RunPEC: 2Q depolarizing parameter p=%.4f too large", p)
 			}
-			eta0 := (1 - p*8/15) / denom
-			etak := -(p / 30) / denom
+			eta0 := (1 - p/15) / denom
+			etak := -(p / 15) / denom
 			d.eta = make([]float64, 16)
 			d.pauli = make([]gate.Gate, 16)
 			d.eta[0] = eta0

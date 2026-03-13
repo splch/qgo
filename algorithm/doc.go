@@ -34,5 +34,5 @@
 //
 // Error mitigation:
 //
-//   - [algorithm/mitigation] — Zero-Noise Extrapolation (ZNE) and measurement error mitigation
+//   - [algorithm/mitigation] — error mitigation (ZNE, readout, Pauli twirling, DD, PEC, CDR, TREX)
 package algorithm

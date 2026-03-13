@@ -5,7 +5,6 @@ import (
 
 	"github.com/splch/goqu/algorithm/mitigation"
 	"github.com/splch/goqu/circuit/builder"
-	"github.com/splch/goqu/circuit/gate"
 	"github.com/splch/goqu/sim/pauli"
 	"github.com/splch/goqu/sim/statevector"
 )
@@ -186,7 +185,6 @@ func TestInsertDD_XY4Sequence(t *testing.T) {
 	if abs(ddVal-idealVal) > 1e-10 {
 		t.Errorf("XY4 changed expectation: ideal=%f, dd=%f", idealVal, ddVal)
 	}
-	_ = gate.X // ensure gate import is used
 }
 
 func abs(x float64) float64 {

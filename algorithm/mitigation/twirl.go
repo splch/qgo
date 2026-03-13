@@ -140,44 +140,13 @@ var cnotTwirlTable [16]twirlEntry
 var czTwirlTable [16]twirlEntry
 
 func init() {
-	// CNOT conjugation: CNOT · (Pa⊗Pb) · CNOT†
-	// Since CNOT is self-adjoint (CNOT† = CNOT):
-	// CNOT · (I⊗I) · CNOT = I⊗I
-	// CNOT · (I⊗X) · CNOT = I⊗X
-	// CNOT · (I⊗Y) · CNOT = Z⊗Y
-	// CNOT · (I⊗Z) · CNOT = Z⊗Z
-	// CNOT · (X⊗I) · CNOT = X⊗X
-	// CNOT · (X⊗X) · CNOT = X⊗I
-	// CNOT · (X⊗Y) · CNOT = -Y⊗Z  (sign absorbed since we square)
-	// CNOT · (X⊗Z) · CNOT = -Y⊗Y
-	// CNOT · (Y⊗I) · CNOT = Y⊗X
-	// CNOT · (Y⊗X) · CNOT = Y⊗I
-	// CNOT · (Y⊗Y) · CNOT = -X⊗Z
-	// CNOT · (Y⊗Z) · CNOT = -X⊗Y  (note: X·Y = iZ)
-	// CNOT · (Z⊗I) · CNOT = Z⊗I
-	// CNOT · (Z⊗X) · CNOT = Z⊗X  (wait, let me redo)
-	// Actually: CNOT · (Z⊗I) · CNOT = Z⊗I
-	// CNOT · (Z⊗X) · CNOT = I⊗X  -- no that's wrong too
-	//
-	// Let me use the standard conjugation rules for CNOT:
-	// CNOT maps: X⊗I → X⊗X, I⊗X → I⊗X, Z⊗I → Z⊗I, I⊗Z → Z⊗Z
-	// From these, derive all 16:
-	// Pa⊗Pb → conjugate(Pa, control) ⊗ conjugate(Pb, target)
-	//
-	// The correct approach: for twirling, we want
-	//   (Pa⊗Pb) · CNOT · (Pc⊗Pd) = CNOT
-	// which means (Pc⊗Pd) = CNOT† · (Pa⊗Pb)† · CNOT = CNOT · (Pa⊗Pb) · CNOT
-	// (since Paulis are self-adjoint and CNOT is self-adjoint)
-
 	// CNOT conjugation table: CNOT · (Pa⊗Pb) · CNOT = (Pc⊗Pd)
-	// Using known transformation rules:
-	//   X_ctrl → X_ctrl ⊗ X_tgt
-	//   Z_ctrl → Z_ctrl
-	//   X_tgt  → X_tgt
-	//   Z_tgt  → Z_ctrl ⊗ Z_tgt
-	// For Y = iXZ:
-	//   Y_ctrl → Y_ctrl ⊗ X_tgt
-	//   Y_tgt  → Z_ctrl ⊗ Y_tgt
+	// Heisenberg picture rules:
+	//   X_ctrl → X_ctrl ⊗ X_tgt,  Z_ctrl → Z_ctrl
+	//   X_tgt  → X_tgt,           Z_tgt  → Z_ctrl ⊗ Z_tgt
+	//   Y_ctrl → Y_ctrl ⊗ X_tgt,  Y_tgt  → Z_ctrl ⊗ Y_tgt
+	// For twirling: (Pa⊗Pb) · CNOT · (Pc⊗Pd) = CNOT
+	// requires (Pc⊗Pd) = CNOT · (Pa⊗Pb) · CNOT (both self-adjoint).
 	cnotConj := [4][4][2]int{
 		// before: I⊗{I,X,Y,Z} → after
 		{{0, 0}, {0, 1}, {3, 2}, {3, 3}}, // I⊗{I,X,Y,Z}
@@ -202,19 +171,16 @@ func init() {
 	}
 
 	// CZ conjugation table: CZ · (Pa⊗Pb) · CZ = (Pc⊗Pd)
-	// CZ is symmetric. Transformation rules:
-	//   X_0 → X_0 ⊗ Z_1
-	//   Z_0 → Z_0
-	//   X_1 → Z_0 ⊗ X_1
-	//   Z_1 → Z_1
-	// For Y = iXZ:
-	//   Y_0 → Y_0 ⊗ Z_1
-	//   Y_1 → Z_0 ⊗ Y_1
+	// Heisenberg picture rules (CZ is symmetric):
+	//   X_0 → X_0 ⊗ Z_1,  Z_0 → Z_0
+	//   X_1 → Z_0 ⊗ X_1,  Z_1 → Z_1
+	//   Y_0 → Y_0 ⊗ Z_1,  Y_1 → Z_0 ⊗ Y_1
+	// Products derived by composing single-qubit rules (phases absorbed).
 	czConj := [4][4][2]int{
-		{{0, 0}, {0, 1}, {0, 2}, {0, 3}}, // I⊗{I,X,Y,Z}
-		{{1, 3}, {1, 2}, {1, 1}, {1, 0}}, // X⊗I→X⊗Z, X⊗X→-Y⊗Y, X⊗Y→Y⊗X, X⊗Z→X⊗I
-		{{2, 3}, {2, 2}, {2, 1}, {2, 0}}, // Y⊗I→Y⊗Z, Y⊗X→X⊗Y, Y⊗Y→-X⊗X, Y⊗Z→Y⊗I
-		{{3, 0}, {3, 1}, {3, 2}, {3, 3}}, // Z⊗{I,X,Y,Z} (Z commutes with CZ)
+		{{0, 0}, {3, 1}, {3, 2}, {0, 3}}, // I⊗I→I⊗I, I⊗X→Z⊗X, I⊗Y→Z⊗Y, I⊗Z→I⊗Z
+		{{1, 3}, {2, 2}, {2, 1}, {1, 0}}, // X⊗I→X⊗Z, X⊗X→Y⊗Y, X⊗Y→Y⊗X, X⊗Z→X⊗I
+		{{2, 3}, {1, 2}, {1, 1}, {2, 0}}, // Y⊗I→Y⊗Z, Y⊗X→X⊗Y, Y⊗Y→X⊗X, Y⊗Z→Y⊗I
+		{{3, 0}, {0, 1}, {0, 2}, {3, 3}}, // Z⊗I→Z⊗I, Z⊗X→I⊗X, Z⊗Y→I⊗Y, Z⊗Z→Z⊗Z
 	}
 
 	idx = 0

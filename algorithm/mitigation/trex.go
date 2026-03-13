@@ -192,7 +192,7 @@ func twirlReadoutCircuit(circuit *ir.Circuit, rng *rand.Rand) (*ir.Circuit, int)
 						Gate:   gate.X,
 						Qubits: []int{q},
 					})
-					flipMask |= 1 << q
+					flipMask ^= 1 << q
 				}
 			}
 		}
