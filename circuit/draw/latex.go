@@ -66,7 +66,7 @@ func FprintLaTeX(w io.Writer, c *ir.Circuit, opts ...LaTeXOption) error {
 	}
 
 	for _, p := range placements {
-		cmds := latexGateCommands(p, cfg)
+		cmds := latexGateCommands(p)
 		for q, cmd := range cmds {
 			grid[q][p.col] = cmd
 		}
@@ -80,7 +80,7 @@ func FprintLaTeX(w io.Writer, c *ir.Circuit, opts ...LaTeXOption) error {
 	sb.WriteString("\n")
 
 	for q := range nq {
-		sb.WriteString(fmt.Sprintf(`\lstick{$q_%d$}`, q))
+		fmt.Fprintf(&sb, `\lstick{$q_%d$}`, q)
 		for col := range numCols {
 			sb.WriteString(" & ")
 			sb.WriteString(grid[q][col])
@@ -100,7 +100,7 @@ func FprintLaTeX(w io.Writer, c *ir.Circuit, opts ...LaTeXOption) error {
 }
 
 // latexGateCommands maps an operation to per-qubit quantikz commands.
-func latexGateCommands(p placement, cfg *latexConfig) map[int]string {
+func latexGateCommands(p placement) map[int]string {
 	op := p.op
 	cmds := make(map[int]string)
 	qubits := op.Qubits
@@ -254,8 +254,7 @@ func latexGateName(name string) string {
 		return "R_{zz}"
 	default:
 		// Handle dagger notation.
-		if strings.HasSuffix(name, "†") {
-			base := strings.TrimSuffix(name, "†")
+		if base, ok := strings.CutSuffix(name, "†"); ok {
 			return base + `^\dagger`
 		}
 		return name
