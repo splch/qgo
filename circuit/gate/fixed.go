@@ -1,6 +1,9 @@
 package gate
 
-import "math"
+import (
+	"math"
+	"math/cmplx"
+)
 
 // fixed is a non-parameterized gate with a precomputed matrix.
 type fixed struct {
@@ -17,7 +20,7 @@ func (g *fixed) Params() []float64    { return nil }
 func (g *fixed) Inverse() Gate {
 	// Self-adjoint gates return themselves.
 	switch g.name {
-	case "I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "CCX", "CSWAP":
+	case "I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "CCX", "CSWAP", "ECR", "CCZ":
 		return g
 	case "S":
 		return Sdg
@@ -129,6 +132,41 @@ var (
 		0, 0, 0, -1i,
 		0, 0, 1i, 0,
 	}}
+
+	ISWAP = &fixed{name: "iSWAP", n: 2, matrix: []complex128{
+		1, 0, 0, 0,
+		0, 0, 1i, 0,
+		0, 1i, 0, 0,
+		0, 0, 0, 1,
+	}}
+
+	ECR = &fixed{name: "ECR", n: 2, matrix: []complex128{
+		0, 0, complex(s2, 0), complex(0, s2),
+		0, 0, complex(0, s2), complex(s2, 0),
+		complex(s2, 0), complex(0, -s2), 0, 0,
+		complex(0, -s2), complex(s2, 0), 0, 0,
+	}}
+
+	DCX = &fixed{name: "DCX", n: 2, matrix: []complex128{
+		1, 0, 0, 0,
+		0, 0, 0, 1,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+	}}
+
+	CH = &fixed{name: "CH", n: 2, matrix: []complex128{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, complex(s2, 0), complex(s2, 0),
+		0, 0, complex(s2, 0), complex(-s2, 0),
+	}}
+
+	CSX = &fixed{name: "CSX", n: 2, matrix: []complex128{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, complex(0.5, 0.5), complex(0.5, -0.5),
+		0, 0, complex(0.5, -0.5), complex(0.5, 0.5),
+	}}
 )
 
 // Standard three-qubit gates.
@@ -154,4 +192,29 @@ var (
 		0, 0, 0, 0, 0, 1, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 1,
 	}}
+
+	CCZ = &fixed{name: "CCZ", n: 3, matrix: []complex128{
+		1, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0,
+		0, 0, 0, 0, 0, 0, 0, -1,
+	}}
+)
+
+// Special gates.
+var (
+	Sycamore = &fixed{name: "Sycamore", n: 2, matrix: func() []complex128 {
+		// FSim(π/2, π/6): Google's native 2-qubit gate.
+		phi := math.Pi / 6
+		return []complex128{
+			1, 0, 0, 0,
+			0, 0, -1i, 0,
+			0, -1i, 0, 0,
+			0, 0, 0, cmplx.Exp(complex(0, -phi)),
+		}
+	}()}
 )

@@ -25,6 +25,13 @@ func (s *Sim) dispatchGate3(g gate.Gate, q0, q1, q2 int) {
 			s.kernel3qCSWAP(q0, q1, q2)
 		}
 		return
+	case gate.CCZ:
+		if parallel {
+			s.kernel3qCCZParallel(q0, q1, q2)
+		} else {
+			s.kernel3qCCZ(q0, q1, q2)
+		}
+		return
 	}
 
 	// Generic fallback.
@@ -96,6 +103,25 @@ func (s *Sim) kernel3qCSWAP(q0, q1, q2 int) {
 					i101 := offset | mask0 | mask2
 					i110 := offset | mask0 | mask1
 					s.state[i101], s.state[i110] = s.state[i110], s.state[i101]
+				}
+			}
+		}
+	}
+}
+
+// kernel3qCCZ: CCZ negates |111> amplitude (all controls set).
+func (s *Sim) kernel3qCCZ(q0, q1, q2 int) {
+	mask0, mask1, mask2, lo, mid, hi := blockStride3(q0, q1, q2)
+	n := len(s.state)
+	loMask := 1 << lo
+	midMask := 1 << mid
+	hiMask := 1 << hi
+	for hi0 := 0; hi0 < n; hi0 += hiMask << 1 {
+		for mid0 := hi0; mid0 < hi0+hiMask; mid0 += midMask << 1 {
+			for lo0 := mid0; lo0 < mid0+midMask; lo0 += loMask << 1 {
+				for offset := lo0; offset < lo0+loMask; offset++ {
+					i111 := offset | mask0 | mask1 | mask2
+					s.state[i111] = -s.state[i111]
 				}
 			}
 		}
@@ -223,6 +249,41 @@ func (s *Sim) kernel3qCSWAPParallel(q0, q1, q2 int) {
 							i101 := offset | mask0 | mask2
 							i110 := offset | mask0 | mask1
 							s.state[i101], s.state[i110] = s.state[i110], s.state[i101]
+						}
+					}
+				}
+			}
+		}(startBlock, endBlock)
+	}
+	wg.Wait()
+}
+
+func (s *Sim) kernel3qCCZParallel(q0, q1, q2 int) {
+	mask0, mask1, mask2, lo, mid, hi := blockStride3(q0, q1, q2)
+	loMask := 1 << lo
+	midMask := 1 << mid
+	hiMask := 1 << hi
+	hiStep := hiMask << 1
+	nBlocks, nWorkers := s.parallelBlocks3(hiMask)
+	blocksPerWorker := nBlocks / nWorkers
+
+	var wg sync.WaitGroup
+	wg.Add(nWorkers)
+	for w := range nWorkers {
+		startBlock := w * blocksPerWorker
+		endBlock := startBlock + blocksPerWorker
+		if w == nWorkers-1 {
+			endBlock = nBlocks
+		}
+		go func(sb, eb int) {
+			defer wg.Done()
+			for b := sb; b < eb; b++ {
+				hi0 := b * hiStep
+				for mid0 := hi0; mid0 < hi0+hiMask; mid0 += midMask << 1 {
+					for lo0 := mid0; lo0 < mid0+midMask; lo0 += loMask << 1 {
+						for offset := lo0; offset < lo0+loMask; offset++ {
+							i111 := offset | mask0 | mask1 | mask2
+							s.state[i111] = -s.state[i111]
 						}
 					}
 				}

@@ -13,10 +13,15 @@ func TestUnitarity(t *testing.T) {
 	gates := []Gate{
 		I, H, X, Y, Z, S, Sdg, T, Tdg, SX,
 		CNOT, CZ, SWAP, CY, CCX, CSWAP,
+		ISWAP, ECR, DCX, CH, CSX, CCZ, Sycamore,
 		RX(math.Pi / 4), RY(math.Pi / 3), RZ(math.Pi / 6),
 		Phase(math.Pi / 4), U3(math.Pi/4, math.Pi/3, math.Pi/6),
+		U1(math.Pi / 4), U2(math.Pi/4, math.Pi/6),
+		Rot(math.Pi/4, math.Pi/3, math.Pi/6),
+		PhasedXZ(0.5, 0.3, 0.1), GlobalPhase(math.Pi / 4),
 		CP(math.Pi / 4), CRZ(math.Pi / 3), CRX(math.Pi / 4), CRY(math.Pi / 5),
 		RXX(math.Pi / 4), RYY(math.Pi / 3), RZZ(math.Pi / 6),
+		FSim(math.Pi/4, math.Pi/6), PSwap(math.Pi / 4),
 		GPI(math.Pi / 4), GPI2(math.Pi / 3), MS(math.Pi/4, math.Pi/6),
 	}
 	for _, g := range gates {
@@ -55,9 +60,14 @@ func assertUnitary(t *testing.T, g Gate) {
 func TestInverse(t *testing.T) {
 	gates := []Gate{
 		I, H, X, Y, Z, S, Sdg, T, Tdg, SX,
-		CNOT, CZ, SWAP, CY,
+		CNOT, CZ, SWAP, CY, CCX, CSWAP,
+		ISWAP, ECR, DCX, CH, CSX, CCZ, Sycamore,
 		RX(math.Pi / 4), RY(math.Pi / 3), RZ(math.Pi / 6),
+		U1(math.Pi / 4), U2(math.Pi/4, math.Pi/6),
+		Rot(math.Pi/4, math.Pi/3, math.Pi/6),
+		PhasedXZ(0.5, 0.3, 0.1), GlobalPhase(math.Pi / 4),
 		RXX(math.Pi / 4), RYY(math.Pi / 3), RZZ(math.Pi / 6),
+		FSim(math.Pi/4, math.Pi/6), PSwap(math.Pi / 4),
 	}
 	for _, g := range gates {
 		t.Run(g.Name(), func(t *testing.T) {
@@ -99,6 +109,34 @@ func TestKnownMatrices(t *testing.T) {
 		{"H", H, []complex128{complex(s2, 0), complex(s2, 0), complex(s2, 0), complex(-s2, 0)}},
 		{"S", S, []complex128{1, 0, 0, 1i}},
 		{"T", T, []complex128{1, 0, 0, complex(s2, s2)}},
+		{"iSWAP", ISWAP, []complex128{
+			1, 0, 0, 0,
+			0, 0, 1i, 0,
+			0, 1i, 0, 0,
+			0, 0, 0, 1,
+		}},
+		{"ECR", ECR, []complex128{
+			0, 0, complex(s2, 0), complex(0, s2),
+			0, 0, complex(0, s2), complex(s2, 0),
+			complex(s2, 0), complex(0, -s2), 0, 0,
+			complex(0, -s2), complex(s2, 0), 0, 0,
+		}},
+		{"DCX", DCX, []complex128{
+			1, 0, 0, 0,
+			0, 0, 0, 1,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+		}},
+		{"CCZ[7,7]", CCZ, []complex128{
+			1, 0, 0, 0, 0, 0, 0, 0,
+			0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 0, 0, 0, 0, 0,
+			0, 0, 0, 1, 0, 0, 0, 0,
+			0, 0, 0, 0, 1, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 0, 0,
+			0, 0, 0, 0, 0, 0, 1, 0,
+			0, 0, 0, 0, 0, 0, 0, -1,
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -169,6 +207,48 @@ func TestParameterizedGates(t *testing.T) {
 		0, 0, 1i, 0,
 		0, 0, 0, -1i,
 	})
+
+	// U1(0) = I
+	m = U1(0).Matrix()
+	assertMatrixClose(t, "U1(0)", m, []complex128{1, 0, 0, 1})
+
+	// U1(lambda) should match Phase(lambda)
+	m = U1(math.Pi / 4).Matrix()
+	mp := Phase(math.Pi / 4).Matrix()
+	assertMatrixClose(t, "U1==Phase", m, mp)
+
+	// U2(0,0) = (1/sqrt2) * [[1, -1], [1, 1]]
+	s2v := 1.0 / math.Sqrt2
+	m = U2(0, 0).Matrix()
+	assertMatrixClose(t, "U2(0,0)", m, []complex128{
+		complex(s2v, 0), complex(-s2v, 0),
+		complex(s2v, 0), complex(s2v, 0),
+	})
+
+	// Rot(0,0,0) = I
+	m = Rot(0, 0, 0).Matrix()
+	assertMatrixClose(t, "Rot(0,0,0)", m, []complex128{1, 0, 0, 1})
+
+	// GlobalPhase(0) = I
+	m = GlobalPhase(0).Matrix()
+	assertMatrixClose(t, "GlobalPhase(0)", m, []complex128{1, 0, 0, 1})
+
+	// FSim(0,0) = I
+	m = FSim(0, 0).Matrix()
+	assertMatrixClose(t, "FSim(0,0)", m, []complex128{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
+	})
+
+	// FSim(pi/2, pi/6) should match Sycamore matrix
+	m = FSim(math.Pi/2, math.Pi/6).Matrix()
+	assertMatrixClose(t, "FSim==Sycamore", m, Sycamore.Matrix())
+
+	// PSwap(0) = SWAP
+	m = PSwap(0).Matrix()
+	assertMatrixClose(t, "PSwap(0)", m, SWAP.Matrix())
 }
 
 func assertMatrixClose(t *testing.T, name string, got, want []complex128) {
@@ -181,6 +261,11 @@ func assertMatrixClose(t *testing.T, name string, got, want []complex128) {
 			t.Errorf("%s: [%d] = %v, want %v", name, i, got[i], want[i])
 		}
 	}
+}
+
+// TestCCZMatchesMCZ2 verifies CCZ matrix matches Controlled(Z, 2).
+func TestCCZMatchesMCZ2(t *testing.T) {
+	assertMatrixClose(t, "CCZ==MCZ(2)", CCZ.Matrix(), MCZ(2).Matrix())
 }
 
 func TestGateProperties(t *testing.T) {

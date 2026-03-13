@@ -225,6 +225,20 @@ func qasmGateName(name string) string {
 		return "cswap"
 	case "I":
 		return "id"
+	case "iSWAP":
+		return "iswap"
+	case "ECR":
+		return "ecr"
+	case "DCX":
+		return "dcx"
+	case "CH":
+		return "ch"
+	case "CSX":
+		return "csx"
+	case "CCZ":
+		return "ccz"
+	case "Sycamore":
+		return "sycamore"
 	}
 	// For parameterized gates, strip the parameter suffix.
 	if idx := strings.Index(name, "("); idx != -1 {
@@ -254,6 +268,20 @@ func qasmGateName(name string) string {
 			return "ryy"
 		case "RZZ":
 			return "rzz"
+		case "U1":
+			return "u1"
+		case "U2":
+			return "u2"
+		case "FSim":
+			return "fsim"
+		case "PSwap":
+			return "pswap"
+		case "Rot":
+			return "rot"
+		case "PhasedXZ":
+			return "phasedxz"
+		case "GlobalPhase":
+			return "gphase"
 		}
 	}
 	return strings.ToLower(name)

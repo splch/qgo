@@ -41,6 +41,20 @@ func (s *Sim) dispatchGate2(g gate.Gate, q0, q1 int) {
 			s.kernel2qCY(q0, q1)
 		}
 		return
+	case gate.ISWAP:
+		if parallel {
+			s.kernel2qISWAPParallel(q0, q1)
+		} else {
+			s.kernel2qISWAP(q0, q1)
+		}
+		return
+	case gate.Sycamore:
+		if parallel {
+			s.kernel2qSycamoreParallel(q0, q1)
+		} else {
+			s.kernel2qSycamore(q0, q1)
+		}
+		return
 	}
 
 	// Name-based dispatch for parameterized gates.
@@ -241,6 +255,49 @@ func (s *Sim) kernel2qGeneric(q0, q1 int, m []complex128) {
 				s.state[i01] = m[4]*a0 + m[5]*a1 + m[6]*a2 + m[7]*a3
 				s.state[i10] = m[8]*a0 + m[9]*a1 + m[10]*a2 + m[11]*a3
 				s.state[i11] = m[12]*a0 + m[13]*a1 + m[14]*a2 + m[15]*a3
+			}
+		}
+	}
+}
+
+// kernel2qISWAP: iSWAP swaps |01⟩↔|10⟩ with factor i.
+func (s *Sim) kernel2qISWAP(q0, q1 int) {
+	mask0, mask1, lo, hi := blockStride2(q0, q1)
+	n := len(s.state)
+	loMask := 1 << lo
+	hiMask := 1 << hi
+	for hi0 := 0; hi0 < n; hi0 += hiMask << 1 {
+		for lo0 := hi0; lo0 < hi0+hiMask; lo0 += loMask << 1 {
+			for offset := lo0; offset < lo0+loMask; offset++ {
+				i01 := offset | mask1
+				i10 := offset | mask0
+				a1, a2 := s.state[i01], s.state[i10]
+				s.state[i01] = 1i * a2
+				s.state[i10] = 1i * a1
+			}
+		}
+	}
+}
+
+// kernel2qSycamore: FSim(π/2, π/6) — iSWAP on |01⟩↔|10⟩ plus phase on |11⟩.
+func (s *Sim) kernel2qSycamore(q0, q1 int) {
+	mask0, mask1, lo, hi := blockStride2(q0, q1)
+	n := len(s.state)
+	loMask := 1 << lo
+	hiMask := 1 << hi
+	// Precompute exp(-iπ/6) for the |11⟩ phase.
+	m := gate.Sycamore.Matrix()
+	d11 := m[15]
+	for hi0 := 0; hi0 < n; hi0 += hiMask << 1 {
+		for lo0 := hi0; lo0 < hi0+hiMask; lo0 += loMask << 1 {
+			for offset := lo0; offset < lo0+loMask; offset++ {
+				i01 := offset | mask1
+				i10 := offset | mask0
+				i11 := offset | mask0 | mask1
+				a1, a2 := s.state[i01], s.state[i10]
+				s.state[i01] = -1i * a2
+				s.state[i10] = -1i * a1
+				s.state[i11] *= d11
 			}
 		}
 	}
@@ -530,6 +587,80 @@ func (s *Sim) kernel2qGenericParallel(q0, q1 int, m []complex128) {
 						s.state[i01] = m[4]*a0 + m[5]*a1 + m[6]*a2 + m[7]*a3
 						s.state[i10] = m[8]*a0 + m[9]*a1 + m[10]*a2 + m[11]*a3
 						s.state[i11] = m[12]*a0 + m[13]*a1 + m[14]*a2 + m[15]*a3
+					}
+				}
+			}
+		}(startBlock, endBlock)
+	}
+	wg.Wait()
+}
+
+func (s *Sim) kernel2qISWAPParallel(q0, q1 int) {
+	mask0, mask1, lo, hi := blockStride2(q0, q1)
+	loMask := 1 << lo
+	hiMask := 1 << hi
+	hiStep := hiMask << 1
+	nBlocks, nWorkers := s.parallelBlocks2(hiMask)
+	blocksPerWorker := nBlocks / nWorkers
+
+	var wg sync.WaitGroup
+	wg.Add(nWorkers)
+	for w := range nWorkers {
+		startBlock := w * blocksPerWorker
+		endBlock := startBlock + blocksPerWorker
+		if w == nWorkers-1 {
+			endBlock = nBlocks
+		}
+		go func(sb, eb int) {
+			defer wg.Done()
+			for b := sb; b < eb; b++ {
+				hi0 := b * hiStep
+				for lo0 := hi0; lo0 < hi0+hiMask; lo0 += loMask << 1 {
+					for offset := lo0; offset < lo0+loMask; offset++ {
+						i01 := offset | mask1
+						i10 := offset | mask0
+						a1, a2 := s.state[i01], s.state[i10]
+						s.state[i01] = 1i * a2
+						s.state[i10] = 1i * a1
+					}
+				}
+			}
+		}(startBlock, endBlock)
+	}
+	wg.Wait()
+}
+
+func (s *Sim) kernel2qSycamoreParallel(q0, q1 int) {
+	mask0, mask1, lo, hi := blockStride2(q0, q1)
+	loMask := 1 << lo
+	hiMask := 1 << hi
+	hiStep := hiMask << 1
+	nBlocks, nWorkers := s.parallelBlocks2(hiMask)
+	blocksPerWorker := nBlocks / nWorkers
+	sm := gate.Sycamore.Matrix()
+	d11 := sm[15]
+
+	var wg sync.WaitGroup
+	wg.Add(nWorkers)
+	for w := range nWorkers {
+		startBlock := w * blocksPerWorker
+		endBlock := startBlock + blocksPerWorker
+		if w == nWorkers-1 {
+			endBlock = nBlocks
+		}
+		go func(sb, eb int) {
+			defer wg.Done()
+			for b := sb; b < eb; b++ {
+				hi0 := b * hiStep
+				for lo0 := hi0; lo0 < hi0+hiMask; lo0 += loMask << 1 {
+					for offset := lo0; offset < lo0+loMask; offset++ {
+						i01 := offset | mask1
+						i10 := offset | mask0
+						i11 := offset | mask0 | mask1
+						a1, a2 := s.state[i01], s.state[i10]
+						s.state[i01] = -1i * a2
+						s.state[i10] = -1i * a1
+						s.state[i11] *= d11
 					}
 				}
 			}
