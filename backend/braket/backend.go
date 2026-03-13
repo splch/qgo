@@ -14,8 +14,8 @@ import (
 	brakettypes "github.com/aws/aws-sdk-go-v2/service/braket/types"
 	s3service "github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/transpile/target"
 )
 
 var _ backend.Backend = (*Backend)(nil)
@@ -67,7 +67,7 @@ func WithS3Bucket(bucket string) Option {
 	return func(b *Backend) { b.s3Bucket = bucket }
 }
 
-// WithS3Prefix sets the S3 key prefix for task output (default: "qgo/").
+// WithS3Prefix sets the S3 key prefix for task output (default: "goqu/").
 func WithS3Prefix(prefix string) Option {
 	return func(b *Backend) { b.s3Prefix = prefix }
 }
@@ -84,7 +84,7 @@ func New(cfg aws.Config, opts ...Option) *Backend {
 		s3:       s3service.NewFromConfig(cfg),
 		device:   "sv1",
 		s3Bucket: "",
-		s3Prefix: "qgo/",
+		s3Prefix: "goqu/",
 		logger:   slog.Default(),
 	}
 	for _, opt := range opts {

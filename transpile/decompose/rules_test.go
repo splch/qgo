@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 // apply1qOp builds the 4x4 matrix for a single-qubit operation acting on

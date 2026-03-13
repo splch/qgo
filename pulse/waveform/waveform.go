@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/pulse"
+	"github.com/splch/goqu/pulse"
 )
 
 // parametric implements pulse.Waveform using a closure-based sample function.

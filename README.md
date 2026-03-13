@@ -1,8 +1,10 @@
-# qgo
+# Goqu
+
+<img height="256" alt="image" src="https://github.com/user-attachments/assets/42cf36fb-33d3-43d9-9176-c28dd5909958" />
 
 A zero-dependency quantum computing SDK for Go.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/splch/qgo.svg)](https://pkg.go.dev/github.com/splch/qgo)
+[![Go Reference](https://pkg.go.dev/badge/github.com/splch/goqu.svg)](https://pkg.go.dev/github.com/splch/goqu)
 ![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -15,7 +17,7 @@ A zero-dependency quantum computing SDK for Go.
 ## Install
 
 ```
-go get github.com/splch/qgo
+go get github.com/splch/goqu
 ```
 
 Requires Go 1.24 or later.
@@ -31,9 +33,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/draw"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/draw"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 func main() {
@@ -166,7 +168,7 @@ go test -bench=. ./sim/statevector/
 
 ## Documentation
 
-[API Reference (pkg.go.dev)](https://pkg.go.dev/github.com/splch/qgo)
+[API Reference (pkg.go.dev)](https://pkg.go.dev/github.com/splch/goqu)
 
 ## License
 

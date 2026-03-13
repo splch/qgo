@@ -6,9 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // Backend represents a quantum execution target.

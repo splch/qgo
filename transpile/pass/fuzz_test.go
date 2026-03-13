@@ -5,11 +5,11 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // buildRandomCircuit constructs a random circuit for fuzz testing.

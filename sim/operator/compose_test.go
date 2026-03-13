@@ -4,7 +4,7 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/goqu/sim/noise"
 )
 
 func TestCompose_IdentityIdentity(t *testing.T) {

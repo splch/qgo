@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/splch/qgo/observe"
+	"github.com/splch/goqu/observe"
 )
 
 const (
 	defaultBaseURL = "https://api.ionq.co/v0.4"
-	userAgent      = "qgo/0.1.0"
+	userAgent      = "goqu/0.1.0"
 )
 
 type httpClient struct {

@@ -4,12 +4,12 @@ package pipeline
 import (
 	"context"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/transpile"
-	"github.com/splch/qgo/transpile/pass"
-	"github.com/splch/qgo/transpile/routing"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/transpile"
+	"github.com/splch/goqu/transpile/pass"
+	"github.com/splch/goqu/transpile/routing"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // Level controls the optimization aggressiveness.

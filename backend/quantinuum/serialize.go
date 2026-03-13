@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/piformat"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/piformat"
 )
 
 // serializeCircuit converts a circuit IR to an OpenQASM 2.0 string

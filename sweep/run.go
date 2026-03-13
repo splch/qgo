@@ -6,11 +6,11 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/sim/densitymatrix"
-	"github.com/splch/qgo/sim/noise"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/sim/densitymatrix"
+	"github.com/splch/goqu/sim/noise"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 // PointResult holds the outcome for a single sweep point.

@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 // staticTokenSource returns a fixed token for testing.

@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // Options configures the SABRE routing algorithm.

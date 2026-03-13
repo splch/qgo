@@ -1,9 +1,9 @@
-// Package observe provides zero-dependency observability hooks for qgo.
+// Package observe provides zero-dependency observability hooks for goqu.
 package observe
 
 import "context"
 
-// Hooks contains optional callbacks for observing qgo operations.
+// Hooks contains optional callbacks for observing goqu operations.
 // Any nil field is silently skipped.
 type Hooks struct {
 	// WrapTranspile is called around the entire transpilation pipeline.

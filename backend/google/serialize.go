@@ -5,8 +5,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 // serializeCircuit converts a circuit IR to a Cirq JSON program using

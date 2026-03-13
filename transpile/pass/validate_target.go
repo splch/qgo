@@ -3,9 +3,9 @@ package pass
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // ValidateTarget checks that all gates are in the target basis, all 2-qubit

@@ -5,7 +5,7 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/goqu/sim/noise"
 )
 
 const testTol = 1e-9

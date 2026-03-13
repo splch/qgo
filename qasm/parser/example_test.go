@@ -3,7 +3,7 @@ package parser_test
 import (
 	"fmt"
 
-	"github.com/splch/qgo/qasm/parser"
+	"github.com/splch/goqu/qasm/parser"
 )
 
 func ExampleParseString() {

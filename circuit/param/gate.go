@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // Ensure symbolicGate satisfies gate.Bindable.

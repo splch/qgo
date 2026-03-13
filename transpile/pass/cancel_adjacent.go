@@ -3,11 +3,11 @@ package pass
 import (
 	"math"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
-	"github.com/splch/qgo/transpile/analysis"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
+	"github.com/splch/goqu/transpile/analysis"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // CancelAdjacent cancels adjacent inverse gate pairs on the same qubits.

@@ -1,6 +1,6 @@
 package routing
 
-import "github.com/splch/qgo/circuit/ir"
+import "github.com/splch/goqu/circuit/ir"
 
 // dag tracks operation dependencies for SABRE routing.
 type dag struct {

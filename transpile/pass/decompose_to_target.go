@@ -3,10 +3,10 @@ package pass
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile"
-	"github.com/splch/qgo/transpile/decompose"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile"
+	"github.com/splch/goqu/transpile/decompose"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // maxDecomposeDepth limits recursive decomposition to prevent infinite loops.

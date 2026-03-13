@@ -2,8 +2,8 @@
 package pass
 
 import (
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // RemoveBarriers strips barrier pseudo-gates from the circuit.

@@ -190,7 +190,7 @@ var (
 		BasisGates: []string{"CZ", "RX", "RZ"},
 		// Native hardware gates are RX, RZ, and iSWAP, but the QCS translation
 		// service accepts CZ and decomposes it to iSWAP internally. We use CZ
-		// here because qgo lacks a native iSWAP gate and CZ is the standard
+		// here because goqu lacks a native iSWAP gate and CZ is the standard
 		// 2Q entangling gate in Quil programs submitted to QCS.
 		// Ankaa uses a square-octagon lattice; nil = all-to-all approximation.
 		// Exact connectivity can be fetched from QCS ISA API at runtime.

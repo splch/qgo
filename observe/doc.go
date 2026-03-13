@@ -1,4 +1,4 @@
-// Package observe provides zero-dependency observability hooks for qgo.
+// Package observe provides zero-dependency observability hooks for goqu.
 //
 // [Hooks] uses the wrap pattern: each hook receives a context and returns
 // an enriched context plus a done function. This enables OpenTelemetry span

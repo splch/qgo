@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/transpile/pipeline"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/transpile/pipeline"
+	"github.com/splch/goqu/transpile/target"
 )
 
 func ExampleRun() {

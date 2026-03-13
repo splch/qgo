@@ -7,9 +7,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/piformat"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/piformat"
 )
 
 // Option configures emitter behavior.
@@ -151,7 +151,7 @@ func (e *emitter) writef(format string, args ...any) {
 	_, e.err = fmt.Fprintf(e.w, format, args...)
 }
 
-// quilGate maps a qgo gate name to Quil name and parameters.
+// quilGate maps a goqu gate name to Quil name and parameters.
 // Returns an error for gates that cannot be directly represented in Quil.
 func quilGate(name string, params []float64) (string, []float64, error) {
 	// Fixed gates.

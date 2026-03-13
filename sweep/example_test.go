@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/param"
-	"github.com/splch/qgo/sweep"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/param"
+	"github.com/splch/goqu/sweep"
 )
 
 func ExampleLinspace() {

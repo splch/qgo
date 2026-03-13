@@ -3,8 +3,8 @@ package analysis
 import (
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 // buildTestCircuit creates: H(0), CNOT(0,1), H(2), CNOT(1,2)

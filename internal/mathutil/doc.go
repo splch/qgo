@@ -1,4 +1,4 @@
-// Package mathutil provides internal math helpers shared across qgo packages.
+// Package mathutil provides internal math helpers shared across goqu packages.
 //
 // [NormalizeAngle] wraps an angle to (−π, π]. [NearZeroMod2Pi] tests whether
 // an angle is effectively zero modulo 2π. [StripParams] and

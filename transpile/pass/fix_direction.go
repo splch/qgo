@@ -3,10 +3,10 @@ package pass
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // FixDirection corrects 2-qubit gate directions for targets with asymmetric connectivity.

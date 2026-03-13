@@ -4,7 +4,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // dispatchControlled routes a ControlledGate to the appropriate kernel.

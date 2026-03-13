@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/qasm/parser"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/qasm/parser"
 )
 
 func TestEmitBell(t *testing.T) {

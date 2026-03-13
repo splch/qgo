@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 func buildRandomPulseProgram(nPorts, nFrames, nInstrs int, seed uint32) (*pulse.Program, error) {

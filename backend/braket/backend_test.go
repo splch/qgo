@@ -14,8 +14,8 @@ import (
 	brakettypes "github.com/aws/aws-sdk-go-v2/service/braket/types"
 	s3service "github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 // --- Mock implementations ---
@@ -54,7 +54,7 @@ func newTestBackend(mb *mockBraket, ms *mockS3) *Backend {
 		device:    "sv1",
 		deviceArn: "arn:aws:braket:::device/quantum-simulator/amazon/sv1",
 		s3Bucket:  "test-bucket",
-		s3Prefix:  "qgo/",
+		s3Prefix:  "goqu/",
 		tgt:       DeviceTarget("sv1"),
 		logger:    noopLogger(),
 	}
@@ -334,7 +334,7 @@ func TestResultFromS3(t *testing.T) {
 				QuantumTaskArn:    input.QuantumTaskArn,
 				Status:            brakettypes.QuantumTaskStatusCompleted,
 				OutputS3Bucket:    aws.String("results-bucket"),
-				OutputS3Directory: aws.String("qgo/task-123"),
+				OutputS3Directory: aws.String("goqu/task-123"),
 			}, nil
 		},
 	}
@@ -343,8 +343,8 @@ func TestResultFromS3(t *testing.T) {
 			if aws.ToString(input.Bucket) != "results-bucket" {
 				t.Errorf("S3 bucket = %q, want results-bucket", aws.ToString(input.Bucket))
 			}
-			if aws.ToString(input.Key) != "qgo/task-123/results.json" {
-				t.Errorf("S3 key = %q, want qgo/task-123/results.json", aws.ToString(input.Key))
+			if aws.ToString(input.Key) != "goqu/task-123/results.json" {
+				t.Errorf("S3 key = %q, want goqu/task-123/results.json", aws.ToString(input.Key))
 			}
 			return &s3service.GetObjectOutput{
 				Body: io.NopCloser(strings.NewReader(resultsJSON)),

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/splch/qgo/observe"
+	"github.com/splch/goqu/observe"
 )
 
 func TestWithHooksRoundTrip(t *testing.T) {

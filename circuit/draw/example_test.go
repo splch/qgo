@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/draw"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/draw"
 )
 
 func Example_bell() {

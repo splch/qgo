@@ -4,9 +4,9 @@ import (
 	"math"
 	"math/cmplx"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
 )
 
 // KAKForBasis decomposes an arbitrary 2-qubit unitary using the KAK (Cartan)

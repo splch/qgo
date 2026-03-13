@@ -5,9 +5,9 @@ import (
 	"math/cmplx"
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/internal/mathutil"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/internal/mathutil"
 )
 
 // rzMatrix returns the 2x2 RZ(theta) matrix as flat row-major []complex128.

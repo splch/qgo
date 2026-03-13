@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/splch/qgo/circuit/ir"
+	"github.com/splch/goqu/circuit/ir"
 )
 
 // SVGOption configures SVG rendering.

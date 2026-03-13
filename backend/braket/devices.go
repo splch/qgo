@@ -1,6 +1,6 @@
 package braket
 
-import "github.com/splch/qgo/transpile/target"
+import "github.com/splch/goqu/transpile/target"
 
 // deviceARNs maps short device names to full AWS Braket device ARNs.
 var deviceARNs = map[string]string{

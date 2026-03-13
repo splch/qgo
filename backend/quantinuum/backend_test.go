@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // mockLoginServer returns an httptest.Server that always returns a valid JWT token.

@@ -3,7 +3,7 @@ package ir
 import (
 	"testing"
 
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 func TestNew_BasicProperties(t *testing.T) {

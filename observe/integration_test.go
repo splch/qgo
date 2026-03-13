@@ -5,14 +5,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/backend/local"
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/job/manager"
-	"github.com/splch/qgo/observe"
-	"github.com/splch/qgo/transpile/pipeline"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/backend/local"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/job/manager"
+	"github.com/splch/goqu/observe"
+	"github.com/splch/goqu/transpile/pipeline"
+	"github.com/splch/goqu/transpile/target"
 )
 
 func bellCircuit(t *testing.T) *ir.Circuit {

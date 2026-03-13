@@ -3,7 +3,7 @@ package operator
 import (
 	"testing"
 
-	"github.com/splch/qgo/sim/noise"
+	"github.com/splch/goqu/sim/noise"
 )
 
 func TestNewKraus(t *testing.T) {

@@ -1,10 +1,10 @@
-module github.com/splch/qgo/observe/prombridge
+module github.com/splch/goqu/observe/prombridge
 
 go 1.24
 
 require (
 	github.com/prometheus/client_golang v1.21.0
-	github.com/splch/qgo v0.0.0
+	github.com/splch/goqu v0.0.0
 )
 
 require (
@@ -18,4 +18,4 @@ require (
 	google.golang.org/protobuf v1.36.1 // indirect
 )
 
-replace github.com/splch/qgo => ../../
+replace github.com/splch/goqu => ../../

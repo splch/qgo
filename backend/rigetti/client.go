@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/splch/qgo/backend/rigetti/internal/qcs"
+	"github.com/splch/goqu/backend/rigetti/internal/qcs"
 )
 
 const (

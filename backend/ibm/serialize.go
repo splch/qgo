@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/qasm/emitter"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/qasm/emitter"
 )
 
 // serializeCircuit converts a circuit IR to an OpenQASM 3.0 string

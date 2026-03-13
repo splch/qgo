@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/circuit/builder"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/circuit/builder"
 )
 
 // newTestBackend creates a Backend wired to mock IAM and API servers.

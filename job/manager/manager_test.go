@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/backend/mock"
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/param"
-	"github.com/splch/qgo/sweep"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/backend/mock"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/param"
+	"github.com/splch/goqu/sweep"
 )
 
 func TestSubmitSync(t *testing.T) {

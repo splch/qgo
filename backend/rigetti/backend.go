@@ -30,9 +30,9 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/splch/qgo/backend"
-	"github.com/splch/qgo/backend/rigetti/internal/qcs"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/backend"
+	"github.com/splch/goqu/backend/rigetti/internal/qcs"
+	"github.com/splch/goqu/transpile/target"
 )
 
 var _ backend.Backend = (*Backend)(nil)

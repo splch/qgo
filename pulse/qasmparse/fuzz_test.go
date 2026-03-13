@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 // FuzzParsePulse feeds arbitrary bytes to the parser and verifies it never panics.

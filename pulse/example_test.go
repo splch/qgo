@@ -3,8 +3,8 @@ package pulse_test
 import (
 	"fmt"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 func ExampleBuilder() {

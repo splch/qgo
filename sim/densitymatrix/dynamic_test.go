@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/circuit/gate"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/circuit/gate"
 )
 
 // TestDMDynamicSimpleConditional: X(0), measure(0→c0), if(c0==1, X, 1).

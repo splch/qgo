@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/sim/statevector"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/sim/statevector"
 )
 
 func ExampleSim_Evolve() {

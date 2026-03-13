@@ -1,3 +1,3 @@
-module github.com/splch/qgo
+module github.com/splch/goqu
 
 go 1.24

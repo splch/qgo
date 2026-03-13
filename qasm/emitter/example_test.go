@@ -3,8 +3,8 @@ package emitter_test
 import (
 	"fmt"
 
-	"github.com/splch/qgo/circuit/builder"
-	"github.com/splch/qgo/qasm/emitter"
+	"github.com/splch/goqu/circuit/builder"
+	"github.com/splch/goqu/qasm/emitter"
 )
 
 func ExampleEmitString() {

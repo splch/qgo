@@ -4,9 +4,9 @@ package transpile
 import (
 	"strings"
 
-	"github.com/splch/qgo/circuit/gate"
-	"github.com/splch/qgo/circuit/ir"
-	"github.com/splch/qgo/transpile/target"
+	"github.com/splch/goqu/circuit/gate"
+	"github.com/splch/goqu/circuit/ir"
+	"github.com/splch/goqu/transpile/target"
 )
 
 // Pass transforms a circuit for a given target.

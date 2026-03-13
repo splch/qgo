@@ -18,7 +18,7 @@ import (
 	"math/cmplx"
 	"math/rand/v2"
 
-	"github.com/splch/qgo/pulse"
+	"github.com/splch/goqu/pulse"
 )
 
 // FrameMap associates pulse frame names with qubit indices.

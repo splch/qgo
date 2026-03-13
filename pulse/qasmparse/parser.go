@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/splch/qgo/pulse"
-	"github.com/splch/qgo/pulse/waveform"
+	"github.com/splch/goqu/pulse"
+	"github.com/splch/goqu/pulse/waveform"
 )
 
 // WaveformConstructor builds a waveform from numeric arguments.
