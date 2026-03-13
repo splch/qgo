@@ -154,11 +154,46 @@ var (
 		// Heavy-hex topology; connectivity fetched from calibration API.
 	}
 
-	Quantinuum = Target{
+	QuantinuumH1 = Target{
 		Name:       "Quantinuum H1",
-		NumQubits:  32,
+		NumQubits:  20,
 		BasisGates: []string{"RZZ", "RZ", "RY"},
 		// all-to-all connectivity (nil)
+	}
+
+	QuantinuumH2 = Target{
+		Name:       "Quantinuum H2",
+		NumQubits:  56,
+		BasisGates: []string{"RZZ", "RZ", "RY"},
+		// all-to-all connectivity (nil)
+	}
+
+	GoogleWillow = Target{
+		Name:       "Google Willow",
+		NumQubits:  105,
+		BasisGates: []string{"CZ", "RZ", "RX"},
+		// 2D grid connectivity; nil = all-to-all approximation.
+		// Exact connectivity can be fetched from the Quantum Engine API at runtime.
+	}
+
+	GoogleSycamore = Target{
+		Name:       "Google Sycamore",
+		NumQubits:  53,
+		BasisGates: []string{"CZ", "RZ", "RX"},
+		// 2D grid connectivity; nil = all-to-all approximation.
+		// Exact connectivity can be fetched from the Quantum Engine API at runtime.
+	}
+
+	RigettiAnkaa = Target{
+		Name:       "Rigetti Ankaa-3",
+		NumQubits:  84,
+		BasisGates: []string{"CZ", "RX", "RZ"},
+		// Native hardware gates are RX, RZ, and iSWAP, but the QCS translation
+		// service accepts CZ and decomposes it to iSWAP internally. We use CZ
+		// here because qgo lacks a native iSWAP gate and CZ is the standard
+		// 2Q entangling gate in Quil programs submitted to QCS.
+		// Ankaa uses a square-octagon lattice; nil = all-to-all approximation.
+		// Exact connectivity can be fetched from QCS ISA API at runtime.
 	}
 
 	Simulator = Target{

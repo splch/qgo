@@ -47,16 +47,16 @@ func TestHasBasisGate_Simulator(t *testing.T) {
 	}
 }
 
-func TestHasBasisGate_Quantinuum(t *testing.T) {
-	q := Quantinuum
+func TestHasBasisGate_QuantinuumH1(t *testing.T) {
+	q := QuantinuumH1
 	yes := []string{"RZZ", "RZ", "RY"}
 	for _, g := range yes {
 		if !q.HasBasisGate(g) {
-			t.Errorf("Quantinuum.HasBasisGate(%q) = false, want true", g)
+			t.Errorf("QuantinuumH1.HasBasisGate(%q) = false, want true", g)
 		}
 	}
 	if q.HasBasisGate("CX") {
-		t.Error("Quantinuum.HasBasisGate(\"CX\") = true, want false")
+		t.Error("QuantinuumH1.HasBasisGate(\"CX\") = true, want false")
 	}
 }
 
@@ -252,7 +252,8 @@ func TestPredefinedTargets(t *testing.T) {
 		{IonQForte, "IonQ Forte", 36},
 		{IonQAria, "IonQ Aria", 25},
 		{IBMEagle, "IBM Eagle", 127},
-		{Quantinuum, "Quantinuum H1", 32},
+		{QuantinuumH1, "Quantinuum H1", 20},
+		{QuantinuumH2, "Quantinuum H2", 56},
 		{Simulator, "Simulator", 28},
 	}
 	for _, tt := range targets {
@@ -286,8 +287,8 @@ func TestIonQTargetsAllToAll(t *testing.T) {
 	if IonQAria.Connectivity != nil {
 		t.Error("IonQAria should have nil connectivity (all-to-all)")
 	}
-	if Quantinuum.Connectivity != nil {
-		t.Error("Quantinuum should have nil connectivity (all-to-all)")
+	if QuantinuumH1.Connectivity != nil {
+		t.Error("QuantinuumH1 should have nil connectivity (all-to-all)")
 	}
 }
 

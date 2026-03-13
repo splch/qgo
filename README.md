@@ -8,7 +8,7 @@ A zero-dependency quantum computing SDK for Go.
 
 - **Zero external dependencies** &mdash; stdlib-only core, single binary deployment
 - **Statevector + density matrix simulators** with goroutine parallelism
-- **Cloud backends** &mdash; IBM Quantum, IonQ, AWS Braket
+- **Cloud backends** &mdash; IBM Quantum, IonQ, Quantinuum, Rigetti, Google Quantum, AWS Braket
 - **Transpilation pipeline** &mdash; SABRE routing, KAK/Euler decomposition, 7 optimization passes
 - **Production observability** &mdash; OpenTelemetry, Prometheus, and slog hooks
 
