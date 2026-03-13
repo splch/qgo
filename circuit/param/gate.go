@@ -196,3 +196,75 @@ func SymRZZ(theta Expr) gate.Gate {
 		},
 	}
 }
+
+// SymU1 creates a symbolic U1 gate.
+func SymU1(lambda Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "U1",
+		nQubits:  1,
+		exprs:    []Expr{lambda},
+		constructor: func(p []float64) gate.Gate {
+			return gate.U1(p[0])
+		},
+	}
+}
+
+// SymU2 creates a symbolic U2 gate.
+func SymU2(phi, lambda Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "U2",
+		nQubits:  1,
+		exprs:    []Expr{phi, lambda},
+		constructor: func(p []float64) gate.Gate {
+			return gate.U2(p[0], p[1])
+		},
+	}
+}
+
+// SymRot creates a symbolic Rot gate.
+func SymRot(phi, theta, omega Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "Rot",
+		nQubits:  1,
+		exprs:    []Expr{phi, theta, omega},
+		constructor: func(p []float64) gate.Gate {
+			return gate.Rot(p[0], p[1], p[2])
+		},
+	}
+}
+
+// SymFSim creates a symbolic FSim gate.
+func SymFSim(theta, phi Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "FSim",
+		nQubits:  2,
+		exprs:    []Expr{theta, phi},
+		constructor: func(p []float64) gate.Gate {
+			return gate.FSim(p[0], p[1])
+		},
+	}
+}
+
+// SymPSwap creates a symbolic PSwap gate.
+func SymPSwap(phi Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "PSwap",
+		nQubits:  2,
+		exprs:    []Expr{phi},
+		constructor: func(p []float64) gate.Gate {
+			return gate.PSwap(p[0])
+		},
+	}
+}
+
+// SymGlobalPhase creates a symbolic GlobalPhase gate.
+func SymGlobalPhase(phi Expr) gate.Gate {
+	return &symbolicGate{
+		baseName: "GlobalPhase",
+		nQubits:  1,
+		exprs:    []Expr{phi},
+		constructor: func(p []float64) gate.Gate {
+			return gate.GlobalPhase(p[0])
+		},
+	}
+}

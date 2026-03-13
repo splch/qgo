@@ -780,6 +780,20 @@ func (p *parser) resolveGate(name string, params []float64) (gate.Gate, error) {
 		return gate.CCX, nil
 	case "cswap":
 		return gate.CSWAP, nil
+	case "iswap":
+		return gate.ISWAP, nil
+	case "ecr":
+		return gate.ECR, nil
+	case "dcx":
+		return gate.DCX, nil
+	case "ch":
+		return gate.CH, nil
+	case "csx":
+		return gate.CSX, nil
+	case "ccz":
+		return gate.CCZ, nil
+	case "sycamore":
+		return gate.Sycamore, nil
 
 	// Parameterized gates.
 	case "rx":
@@ -811,7 +825,12 @@ func (p *parser) resolveGate(name string, params []float64) (gate.Gate, error) {
 		if len(params) != 1 {
 			return nil, fmt.Errorf("u1 requires 1 parameter, got %d", len(params))
 		}
-		return gate.Phase(params[0]), nil
+		return gate.U1(params[0]), nil
+	case "u2":
+		if len(params) != 2 {
+			return nil, fmt.Errorf("u2 requires 2 parameters, got %d", len(params))
+		}
+		return gate.U2(params[0], params[1]), nil
 	case "cp", "cphase":
 		if len(params) != 1 {
 			return nil, fmt.Errorf("cp requires 1 parameter, got %d", len(params))
@@ -848,8 +867,10 @@ func (p *parser) resolveGate(name string, params []float64) (gate.Gate, error) {
 		}
 		return gate.RZZ(params[0]), nil
 	case "gphase":
-		// Global phase — no qubits, just a parameter. Treat as identity for IR.
-		return gate.I, nil
+		if len(params) != 1 {
+			return nil, fmt.Errorf("gphase requires 1 parameter, got %d", len(params))
+		}
+		return gate.GlobalPhase(params[0]), nil
 	}
 
 	// Check user-defined gates.

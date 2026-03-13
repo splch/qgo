@@ -305,3 +305,136 @@ func MS(phi0, phi1 float64) Gate {
 		},
 	}
 }
+
+// U1 returns a phase gate (Qiskit compatibility alias for Phase).
+//
+//	diag(1, exp(iλ))
+func U1(lambda float64) Gate {
+	return &parameterized{
+		name:   fmt.Sprintf("U1(%.4f)", lambda),
+		n:      1,
+		params: []float64{lambda},
+		matrix: []complex128{
+			1, 0,
+			0, cmplx.Exp(complex(0, lambda)),
+		},
+	}
+}
+
+// U2 returns the single-qubit gate U3(π/2, φ, λ).
+//
+//	(1/√2)·[[1, -exp(iλ)], [exp(iφ), exp(i(φ+λ))]]
+func U2(phi, lambda float64) Gate {
+	return &parameterized{
+		name:   fmt.Sprintf("U2(%.4f,%.4f)", phi, lambda),
+		n:      1,
+		params: []float64{phi, lambda},
+		matrix: []complex128{
+			complex(s2, 0),
+			-cmplx.Exp(complex(0, lambda)) * complex(s2, 0),
+			cmplx.Exp(complex(0, phi)) * complex(s2, 0),
+			cmplx.Exp(complex(0, phi+lambda)) * complex(s2, 0),
+		},
+	}
+}
+
+// Rot returns the PennyLane-style rotation gate RZ(ω)·RY(θ)·RZ(φ).
+func Rot(phi, theta, omega float64) Gate {
+	// Compute the 2x2 matrix as product: RZ(omega) * RY(theta) * RZ(phi).
+	cth, sth := math.Cos(theta/2), math.Sin(theta/2)
+	eipo := cmplx.Exp(complex(0, (phi+omega)/2))
+	eimo := cmplx.Exp(complex(0, (phi-omega)/2))
+	// RZ(w)*RY(t)*RZ(p) =
+	// [[ exp(-i(p+w)/2)*cos(t/2), -exp(i(p-w)/2)*sin(t/2)],
+	//  [ exp(-i(p-w)/2)*sin(t/2),  exp(i(p+w)/2)*cos(t/2)]]
+	return &parameterized{
+		name:   fmt.Sprintf("Rot(%.4f,%.4f,%.4f)", phi, theta, omega),
+		n:      1,
+		params: []float64{phi, theta, omega},
+		matrix: []complex128{
+			conj(eipo) * complex(cth, 0),
+			-conj(eimo) * complex(sth, 0),
+			eimo * complex(sth, 0),
+			eipo * complex(cth, 0),
+		},
+	}
+}
+
+// PhasedXZ returns the Cirq-style PhasedXZ gate: Z^z · P^a · X^x · (P^a)†.
+// Parameters are in half-turns. Z^z = diag(1, e^{iπz}), P^a = diag(1, e^{iπa}),
+// X^x has matrix [[cos(πx/2), i·sin(πx/2)], [i·sin(πx/2), cos(πx/2)]].
+func PhasedXZ(xExp, zExp, axisPhaseExp float64) Gate {
+	cx := math.Cos(math.Pi * xExp / 2)
+	sx := math.Sin(math.Pi * xExp / 2)
+	ez := cmplx.Exp(complex(0, math.Pi*zExp))
+	ea := cmplx.Exp(complex(0, math.Pi*axisPhaseExp))
+	return &parameterized{
+		name:   fmt.Sprintf("PhasedXZ(%.4f,%.4f,%.4f)", xExp, zExp, axisPhaseExp),
+		n:      1,
+		params: []float64{xExp, zExp, axisPhaseExp},
+		matrix: []complex128{
+			complex(cx, 0),
+			conj(ea) * complex(0, sx),
+			ez * ea * complex(0, sx),
+			ez * complex(cx, 0),
+		},
+	}
+}
+
+// GlobalPhase returns a gate applying scalar phase e^(iφ) to a single qubit.
+//
+//	e^(iφ)·I = [[e^(iφ), 0], [0, e^(iφ)]]
+func GlobalPhase(phi float64) Gate {
+	ep := cmplx.Exp(complex(0, phi))
+	return &parameterized{
+		name:   fmt.Sprintf("GlobalPhase(%.4f)", phi),
+		n:      1,
+		params: []float64{phi},
+		matrix: []complex128{
+			ep, 0,
+			0, ep,
+		},
+	}
+}
+
+// FSim returns the fermionic simulation gate.
+//
+//	[[1, 0, 0, 0],
+//	 [0, cos θ, -i·sin θ, 0],
+//	 [0, -i·sin θ, cos θ, 0],
+//	 [0, 0, 0, exp(-iφ)]]
+func FSim(theta, phi float64) Gate {
+	ct, st := math.Cos(theta), math.Sin(theta)
+	return &parameterized{
+		name:   fmt.Sprintf("FSim(%.4f,%.4f)", theta, phi),
+		n:      2,
+		params: []float64{theta, phi},
+		matrix: []complex128{
+			1, 0, 0, 0,
+			0, complex(ct, 0), complex(0, -st), 0,
+			0, complex(0, -st), complex(ct, 0), 0,
+			0, 0, 0, cmplx.Exp(complex(0, -phi)),
+		},
+	}
+}
+
+// PSwap returns the parameterized SWAP gate.
+//
+//	[[1, 0, 0, 0],
+//	 [0, 0, exp(iφ), 0],
+//	 [0, exp(iφ), 0, 0],
+//	 [0, 0, 0, 1]]
+func PSwap(phi float64) Gate {
+	ep := cmplx.Exp(complex(0, phi))
+	return &parameterized{
+		name:   fmt.Sprintf("PSwap(%.4f)", phi),
+		n:      2,
+		params: []float64{phi},
+		matrix: []complex128{
+			1, 0, 0, 0,
+			0, 0, ep, 0,
+			0, ep, 0, 0,
+			0, 0, 0, 1,
+		},
+	}
+}

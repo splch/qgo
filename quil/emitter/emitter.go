@@ -189,6 +189,10 @@ func quilGate(name string, params []float64) (string, []float64, error) {
 		return "CCNOT", nil, nil
 	case "CSWAP":
 		return "CSWAP", nil, nil
+	case "iSWAP":
+		return "ISWAP", nil, nil
+	case "CCZ":
+		return "CONTROLLED CONTROLLED Z", nil, nil
 	}
 
 	// Parameterized gates: strip the "(..." suffix from the name.

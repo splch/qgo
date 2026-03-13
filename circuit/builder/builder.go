@@ -137,10 +137,31 @@ func (b *Builder) SWAP(q0, q1 int) *Builder {
 	return b.Apply(gate.SWAP, q0, q1)
 }
 
+// ISWAP applies an iSWAP gate.
+func (b *Builder) ISWAP(q0, q1 int) *Builder { return b.Apply(gate.ISWAP, q0, q1) }
+
+// ECR applies an ECR (echoed cross-resonance) gate.
+func (b *Builder) ECR(q0, q1 int) *Builder { return b.Apply(gate.ECR, q0, q1) }
+
+// DCX applies a DCX (double CNOT) gate.
+func (b *Builder) DCX(q0, q1 int) *Builder { return b.Apply(gate.DCX, q0, q1) }
+
+// CH applies a controlled-Hadamard gate.
+func (b *Builder) CH(control, target int) *Builder { return b.Apply(gate.CH, control, target) }
+
+// CSX applies a controlled-√X gate.
+func (b *Builder) CSX(control, target int) *Builder { return b.Apply(gate.CSX, control, target) }
+
+// Sycamore applies Google's Sycamore gate.
+func (b *Builder) Sycamore(q0, q1 int) *Builder { return b.Apply(gate.Sycamore, q0, q1) }
+
 // CCX applies a Toffoli (CCX) gate.
 func (b *Builder) CCX(c0, c1, target int) *Builder {
 	return b.Apply(gate.CCX, c0, c1, target)
 }
+
+// CCZ applies a doubly-controlled Z gate.
+func (b *Builder) CCZ(c0, c1, target int) *Builder { return b.Apply(gate.CCZ, c0, c1, target) }
 
 // MCX applies a multi-controlled X gate.
 func (b *Builder) MCX(controls []int, target int) *Builder {
@@ -192,6 +213,27 @@ func (b *Builder) U3(theta, phi, lambda float64, q int) *Builder {
 	return b.Apply(gate.U3(theta, phi, lambda), q)
 }
 
+// U1 applies a U1 (phase) gate.
+func (b *Builder) U1(lambda float64, q int) *Builder { return b.Apply(gate.U1(lambda), q) }
+
+// U2 applies a U2 gate.
+func (b *Builder) U2(phi, lambda float64, q int) *Builder { return b.Apply(gate.U2(phi, lambda), q) }
+
+// Rot applies a PennyLane-style Rot gate.
+func (b *Builder) Rot(phi, theta, omega float64, q int) *Builder {
+	return b.Apply(gate.Rot(phi, theta, omega), q)
+}
+
+// PhasedXZ applies a Cirq-style PhasedXZ gate.
+func (b *Builder) PhasedXZ(x, z, a float64, q int) *Builder {
+	return b.Apply(gate.PhasedXZ(x, z, a), q)
+}
+
+// GlobalPhase applies a global phase gate.
+func (b *Builder) GlobalPhase(phi float64, q int) *Builder {
+	return b.Apply(gate.GlobalPhase(phi), q)
+}
+
 // StatePrep adds a state preparation gate.
 func (b *Builder) StatePrep(amplitudes []complex128, qubits ...int) *Builder {
 	if b.err != nil {
@@ -227,6 +269,16 @@ func (b *Builder) RYY(theta float64, q0, q1 int) *Builder { return b.Apply(gate.
 
 // RZZ applies an Ising ZZ rotation gate.
 func (b *Builder) RZZ(theta float64, q0, q1 int) *Builder { return b.Apply(gate.RZZ(theta), q0, q1) }
+
+// FSim applies a fermionic simulation gate.
+func (b *Builder) FSim(theta, phi float64, q0, q1 int) *Builder {
+	return b.Apply(gate.FSim(theta, phi), q0, q1)
+}
+
+// PSwap applies a parameterized SWAP gate.
+func (b *Builder) PSwap(phi float64, q0, q1 int) *Builder {
+	return b.Apply(gate.PSwap(phi), q0, q1)
+}
 
 // SymRX applies a symbolic RX gate.
 func (b *Builder) SymRX(theta param.Expr, q int) *Builder {
@@ -271,6 +323,36 @@ func (b *Builder) SymRYY(theta param.Expr, q0, q1 int) *Builder {
 // SymRZZ applies a symbolic Ising ZZ gate.
 func (b *Builder) SymRZZ(theta param.Expr, q0, q1 int) *Builder {
 	return b.Apply(param.SymRZZ(theta), q0, q1)
+}
+
+// SymU1 applies a symbolic U1 gate.
+func (b *Builder) SymU1(lambda param.Expr, q int) *Builder {
+	return b.Apply(param.SymU1(lambda), q)
+}
+
+// SymU2 applies a symbolic U2 gate.
+func (b *Builder) SymU2(phi, lambda param.Expr, q int) *Builder {
+	return b.Apply(param.SymU2(phi, lambda), q)
+}
+
+// SymRot applies a symbolic Rot gate.
+func (b *Builder) SymRot(phi, theta, omega param.Expr, q int) *Builder {
+	return b.Apply(param.SymRot(phi, theta, omega), q)
+}
+
+// SymFSim applies a symbolic FSim gate.
+func (b *Builder) SymFSim(theta, phi param.Expr, q0, q1 int) *Builder {
+	return b.Apply(param.SymFSim(theta, phi), q0, q1)
+}
+
+// SymPSwap applies a symbolic PSwap gate.
+func (b *Builder) SymPSwap(phi param.Expr, q0, q1 int) *Builder {
+	return b.Apply(param.SymPSwap(phi), q0, q1)
+}
+
+// SymGlobalPhase applies a symbolic GlobalPhase gate.
+func (b *Builder) SymGlobalPhase(phi param.Expr, q int) *Builder {
+	return b.Apply(param.SymGlobalPhase(phi), q)
 }
 
 // Measure adds a measurement of qubit to classical bit.

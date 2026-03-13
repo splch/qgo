@@ -107,3 +107,9 @@ func (g *controlled) Matrix() []complex128 {
 	})
 	return g.matrix
 }
+
+// C3X returns a 3-controlled X gate (4 qubits total).
+func C3X() Gate { return MCX(3) }
+
+// C4X returns a 4-controlled X gate (5 qubits total).
+func C4X() Gate { return MCX(4) }
