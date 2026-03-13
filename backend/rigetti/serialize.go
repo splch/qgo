@@ -23,21 +23,21 @@ func serializeCircuit(c *ir.Circuit) (string, error) {
 // parseResults converts QCS readout data into a backend.Result.
 // QCS returns per-shot measurement arrays (not pre-aggregated counts).
 func parseResults(resp *qcs.ResultsResponse, readoutMap map[string]string, shots int) (*backend.Result, error) {
-	if resp == nil || len(resp.MemoryValues) == 0 {
+	if resp == nil || resp.Result == nil || len(resp.Result.MemoryValues) == 0 {
 		return nil, fmt.Errorf("rigetti: no results in response")
 	}
 
 	// Look for the "ro" readout register.
-	roData, ok := resp.MemoryValues["ro"]
+	roVal, ok := resp.Result.MemoryValues["ro"]
 	if !ok {
 		// Try the first available register.
-		for _, v := range resp.MemoryValues {
-			roData = v
+		for _, v := range resp.Result.MemoryValues {
+			roVal = v
 			break
 		}
 	}
 
-	if len(roData) == 0 {
+	if roVal == nil || len(roVal.Binary) == 0 {
 		return &backend.Result{
 			Counts: make(map[string]int),
 			Shots:  shots,
@@ -45,14 +45,14 @@ func parseResults(resp *qcs.ResultsResponse, readoutMap map[string]string, shots
 	}
 
 	counts := make(map[string]int)
-	for _, shot := range roData {
+	for _, shot := range roVal.Binary {
 		bs := shotToBitstring(shot)
 		counts[bs]++
 	}
 
 	return &backend.Result{
 		Counts: counts,
-		Shots:  len(roData),
+		Shots:  len(roVal.Binary),
 	}, nil
 }
 

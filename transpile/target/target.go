@@ -168,9 +168,6 @@ var (
 		// all-to-all connectivity (nil)
 	}
 
-	// Quantinuum is a backward-compatible alias for QuantinuumH1.
-	Quantinuum = QuantinuumH1
-
 	GoogleWillow = Target{
 		Name:       "Google Willow",
 		NumQubits:  105,
@@ -191,6 +188,10 @@ var (
 		Name:       "Rigetti Ankaa-3",
 		NumQubits:  84,
 		BasisGates: []string{"CZ", "RX", "RZ"},
+		// Native hardware gates are RX, RZ, and iSWAP, but the QCS translation
+		// service accepts CZ and decomposes it to iSWAP internally. We use CZ
+		// here because qgo lacks a native iSWAP gate and CZ is the standard
+		// 2Q entangling gate in Quil programs submitted to QCS.
 		// Ankaa uses a square-octagon lattice; nil = all-to-all approximation.
 		// Exact connectivity can be fetched from QCS ISA API at runtime.
 	}

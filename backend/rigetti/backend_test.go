@@ -50,6 +50,16 @@ func (m *mockController) CancelControllerJobs(_ context.Context, _ *qcs.CancelRe
 	return &qcs.CancelResponse{}, m.cancelErr
 }
 
+// mockAccessor implements accessorAPI for testing.
+type mockAccessor struct {
+	info *qcs.AccessorInfo
+	err  error
+}
+
+func (m *mockAccessor) GetAccessor(_ context.Context, _ string) (*qcs.AccessorInfo, error) {
+	return m.info, m.err
+}
+
 // newTestBackend creates a Backend with mock services (no credentials needed).
 func newTestBackend(t *testing.T, trans *mockTranslation, ctrl *mockController) *Backend {
 	t.Helper()
@@ -58,6 +68,11 @@ func newTestBackend(t *testing.T, trans *mockTranslation, ctrl *mockController) 
 		WithProcessor("Ankaa-3"),
 		withTranslation(trans),
 		withController(ctrl),
+		withAccessor(&mockAccessor{
+			info: &qcs.AccessorInfo{
+				Address: "grpc.test.qcs.rigetti.com:443",
+			},
+		}),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -68,23 +83,29 @@ func newTestBackend(t *testing.T, trans *mockTranslation, ctrl *mockController) 
 func TestSubmitAndResult(t *testing.T) {
 	trans := &mockTranslation{
 		resp: &qcs.TranslateResponse{
-			EncryptedProgram: []byte("encrypted-program"),
-			ReadoutMap:       map[string]string{"0": "0", "1": "1"},
+			Job: &qcs.EncryptedControllerJob{
+				Job: []byte("encrypted-program"),
+			},
+			Metadata: &qcs.QuilTranslationMetadata{
+				ReadoutMappings: map[string]string{"0": "0", "1": "1"},
+			},
 		},
 	}
 	ctrl := &mockController{
-		execResp: &qcs.ExecuteResponse{ExecutionID: "exec-123"},
+		execResp: &qcs.ExecuteResponse{JobExecutionIDs: []string{"exec-123"}},
 		statusResp: &qcs.StatusResponse{
-			ExecutionID: "exec-123",
-			Status:      qcs.StatusSucceeded,
+			JobID:  "exec-123",
+			Status: qcs.StatusSucceeded,
 		},
 		resultsResp: &qcs.ResultsResponse{
-			MemoryValues: map[string][][]int{
-				"ro": {
-					{0, 0}, // |00>
-					{0, 0}, // |00>
-					{1, 1}, // |11>
-					{1, 1}, // |11>
+			Result: &qcs.ControllerJobExecutionResult{
+				MemoryValues: map[string]*qcs.DataValue{
+					"ro": {Binary: [][]int{
+						{0, 0}, // |00>
+						{0, 0}, // |00>
+						{1, 1}, // |11>
+						{1, 1}, // |11>
+					}},
 				},
 			},
 		},
@@ -139,14 +160,15 @@ func TestStatusAllStates(t *testing.T) {
 		{qcs.StatusSucceeded, backend.StateCompleted},
 		{qcs.StatusFailed, backend.StateFailed},
 		{qcs.StatusCanceled, backend.StateCancelled},
+		{qcs.StatusPostProcessing, backend.StateRunning},
 	}
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("status_%d", tt.qcsStatus), func(t *testing.T) {
 			ctrl := &mockController{
 				statusResp: &qcs.StatusResponse{
-					ExecutionID: "exec-state",
-					Status:      tt.qcsStatus,
+					JobID:  "exec-state",
+					Status: tt.qcsStatus,
 				},
 			}
 			b := newTestBackend(t, &mockTranslation{}, ctrl)
@@ -164,9 +186,9 @@ func TestStatusAllStates(t *testing.T) {
 func TestStatusWithError(t *testing.T) {
 	ctrl := &mockController{
 		statusResp: &qcs.StatusResponse{
-			ExecutionID: "exec-fail",
-			Status:      qcs.StatusFailed,
-			Error:       "circuit compilation failed",
+			JobID:  "exec-fail",
+			Status: qcs.StatusFailed,
+			Error:  "circuit compilation failed",
 		},
 	}
 	b := newTestBackend(t, &mockTranslation{}, ctrl)
@@ -185,8 +207,8 @@ func TestStatusWithError(t *testing.T) {
 func TestResultNotCompleted(t *testing.T) {
 	ctrl := &mockController{
 		statusResp: &qcs.StatusResponse{
-			ExecutionID: "exec-running",
-			Status:      qcs.StatusRunning,
+			JobID:  "exec-running",
+			Status: qcs.StatusRunning,
 		},
 	}
 	b := newTestBackend(t, &mockTranslation{}, ctrl)
@@ -271,10 +293,45 @@ func TestTranslationError(t *testing.T) {
 	}
 }
 
+func TestAccessorError(t *testing.T) {
+	trans := &mockTranslation{
+		resp: &qcs.TranslateResponse{
+			Job: &qcs.EncryptedControllerJob{
+				Job: []byte("encrypted"),
+			},
+		},
+	}
+	ctrl := &mockController{}
+
+	b, err := New(
+		WithAccessToken("test-token"),
+		WithProcessor("Ankaa-3"),
+		withTranslation(trans),
+		withController(ctrl),
+		withAccessor(&mockAccessor{
+			err: fmt.Errorf("no accessors found"),
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, _ := builder.New("test", 1).H(0).MeasureAll().Build()
+	_, err = b.Submit(context.Background(), &backend.SubmitRequest{
+		Circuit: c,
+		Shots:   100,
+	})
+	if err == nil {
+		t.Fatal("expected accessor error")
+	}
+}
+
 func TestExecutionError(t *testing.T) {
 	trans := &mockTranslation{
 		resp: &qcs.TranslateResponse{
-			EncryptedProgram: []byte("encrypted"),
+			Job: &qcs.EncryptedControllerJob{
+				Job: []byte("encrypted"),
+			},
 		},
 	}
 	ctrl := &mockController{
@@ -314,12 +371,14 @@ func TestMapQCSStatus(t *testing.T) {
 		s    qcs.JobStatus
 		want backend.JobState
 	}{
+		{qcs.StatusUnknown, backend.StateSubmitted},
 		{qcs.StatusQueued, backend.StateSubmitted},
 		{qcs.StatusRunning, backend.StateRunning},
 		{qcs.StatusSucceeded, backend.StateCompleted},
 		{qcs.StatusFailed, backend.StateFailed},
 		{qcs.StatusCanceled, backend.StateCancelled},
-		{qcs.JobStatus(99), backend.StateSubmitted}, // unknown
+		{qcs.StatusPostProcessing, backend.StateRunning},
+		{qcs.JobStatus(99), backend.StateSubmitted}, // unknown future value
 	}
 	for _, tt := range tests {
 		if got := mapQCSStatus(tt.s); got != tt.want {
@@ -359,12 +418,14 @@ func TestSerializeCircuit(t *testing.T) {
 
 func TestParseResults(t *testing.T) {
 	resp := &qcs.ResultsResponse{
-		MemoryValues: map[string][][]int{
-			"ro": {
-				{0, 0, 0},
-				{1, 0, 1},
-				{1, 0, 1},
-				{0, 1, 0},
+		Result: &qcs.ControllerJobExecutionResult{
+			MemoryValues: map[string]*qcs.DataValue{
+				"ro": {Binary: [][]int{
+					{0, 0, 0},
+					{1, 0, 1},
+					{1, 0, 1},
+					{0, 1, 0},
+				}},
 			},
 		},
 	}
@@ -391,5 +452,35 @@ func TestParseResultsEmpty(t *testing.T) {
 	_, err := parseResults(&qcs.ResultsResponse{}, nil, 4)
 	if err == nil {
 		t.Fatal("expected error for empty results")
+	}
+}
+
+func TestParseResultsNilResult(t *testing.T) {
+	_, err := parseResults(&qcs.ResultsResponse{Result: nil}, nil, 4)
+	if err == nil {
+		t.Fatal("expected error for nil result")
+	}
+}
+
+func TestNoExecutionIDs(t *testing.T) {
+	trans := &mockTranslation{
+		resp: &qcs.TranslateResponse{
+			Job: &qcs.EncryptedControllerJob{
+				Job: []byte("encrypted"),
+			},
+		},
+	}
+	ctrl := &mockController{
+		execResp: &qcs.ExecuteResponse{JobExecutionIDs: []string{}},
+	}
+	b := newTestBackend(t, trans, ctrl)
+
+	c, _ := builder.New("test", 1).H(0).MeasureAll().Build()
+	_, err := b.Submit(context.Background(), &backend.SubmitRequest{
+		Circuit: c,
+		Shots:   100,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty execution IDs")
 	}
 }

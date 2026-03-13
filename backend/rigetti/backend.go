@@ -4,6 +4,12 @@
 // is a separate Go module to isolate gRPC/protobuf dependencies from
 // the zero-dep core.
 //
+// The submission flow follows the real QCS pipeline (Gateway strategy):
+//  1. Translate Quil → encrypted controller job (gRPC)
+//  2. Discover gateway endpoint for processor (REST)
+//  3. Execute encrypted job via gateway (gRPC)
+//  4. Poll status / fetch results (gRPC)
+//
 // Usage:
 //
 //	b := rigetti.New(
@@ -41,9 +47,9 @@ type Backend struct {
 }
 
 type jobMeta struct {
-	qubits     int
-	shots      int
-	readoutMap map[string]string
+	qubits          int
+	shots           int
+	readoutMappings map[string]string
 }
 
 // Option configures a Rigetti QCS Backend.
@@ -58,6 +64,7 @@ type backendConfig struct {
 	// For testing: inject mock services.
 	translation translationAPI
 	controller  controllerAPI
+	accessor    accessorAPI
 }
 
 // WithProcessor sets the QPU processor ID (default: "Ankaa-3").
@@ -95,6 +102,11 @@ func withController(ctrl controllerAPI) Option {
 	return func(c *backendConfig) { c.controller = ctrl }
 }
 
+// withAccessor injects a mock accessor service (for testing).
+func withAccessor(acc accessorAPI) Option {
+	return func(c *backendConfig) { c.accessor = acc }
+}
+
 // New creates a Rigetti QCS backend.
 // Credentials are read from ~/.qcs/secrets.toml unless WithAccessToken is used.
 func New(opts ...Option) (*Backend, error) {
@@ -125,6 +137,9 @@ func New(opts ...Option) (*Backend, error) {
 	}
 	if cfg.controller != nil {
 		client.controller = cfg.controller
+	}
+	if cfg.accessor != nil {
+		client.accessor = cfg.accessor
 	}
 
 	return &Backend{
@@ -167,25 +182,49 @@ func (b *Backend) Submit(ctx context.Context, req *backend.SubmitRequest) (*back
 		return nil, fmt.Errorf("rigetti: translate: %w", err)
 	}
 
-	// Step 2: Execute the encrypted job.
-	execResp, err := b.client.execute(ctx, translateResp.EncryptedProgram, b.processor)
+	// Step 2: Discover gateway endpoint for processor (Gateway strategy).
+	// The real qcs-sdk-rust discovers the per-QPU gRPC endpoint via the
+	// REST API (GET /v1/quantumProcessors/{id}/accessors) rather than
+	// the legacy engagement flow.
+	accessor, err := b.client.getAccessor(ctx, b.processor)
+	if err != nil {
+		return nil, fmt.Errorf("rigetti: accessor lookup: %w", err)
+	}
+
+	b.logger.InfoContext(ctx, "gateway discovered",
+		slog.String("address", accessor.Address),
+	)
+
+	// Step 3: Execute the encrypted job via gateway.
+	execResp, err := b.client.execute(ctx, translateResp.Job, b.processor)
 	if err != nil {
 		return nil, fmt.Errorf("rigetti: execute: %w", err)
 	}
 
+	if len(execResp.JobExecutionIDs) == 0 {
+		return nil, fmt.Errorf("rigetti: no execution IDs returned")
+	}
+	executionID := execResp.JobExecutionIDs[0]
+
+	// Extract readout mappings from translation metadata.
+	var readoutMappings map[string]string
+	if translateResp.Metadata != nil {
+		readoutMappings = translateResp.Metadata.ReadoutMappings
+	}
+
 	// Store metadata for result retrieval.
-	b.jobs.Store(execResp.ExecutionID, jobMeta{
-		qubits:     req.Circuit.NumQubits(),
-		shots:      req.Shots,
-		readoutMap: translateResp.ReadoutMap,
+	b.jobs.Store(executionID, jobMeta{
+		qubits:          req.Circuit.NumQubits(),
+		shots:           req.Shots,
+		readoutMappings: readoutMappings,
 	})
 
 	b.logger.InfoContext(ctx, "job submitted to Rigetti QCS",
-		slog.String("execution_id", execResp.ExecutionID),
+		slog.String("execution_id", executionID),
 	)
 
 	return &backend.Job{
-		ID:      execResp.ExecutionID,
+		ID:      executionID,
 		Backend: b.Name(),
 		State:   backend.StateSubmitted,
 	}, nil
@@ -193,13 +232,13 @@ func (b *Backend) Submit(ctx context.Context, req *backend.SubmitRequest) (*back
 
 // Status returns the current state of a job.
 func (b *Backend) Status(ctx context.Context, jobID string) (*backend.JobStatus, error) {
-	resp, err := b.client.status(ctx, jobID)
+	resp, err := b.client.status(ctx, b.processor, jobID)
 	if err != nil {
 		return nil, err
 	}
 
 	status := &backend.JobStatus{
-		ID:       resp.ExecutionID,
+		ID:       resp.JobID,
 		State:    mapQCSStatus(resp.Status),
 		Progress: -1,
 		QueuePos: -1,
@@ -216,7 +255,7 @@ func (b *Backend) Status(ctx context.Context, jobID string) (*backend.JobStatus,
 // Result retrieves the measurement results from a completed job.
 func (b *Backend) Result(ctx context.Context, jobID string) (*backend.Result, error) {
 	// Check status first.
-	statusResp, err := b.client.status(ctx, jobID)
+	statusResp, err := b.client.status(ctx, b.processor, jobID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,34 +264,36 @@ func (b *Backend) Result(ctx context.Context, jobID string) (*backend.Result, er
 	}
 
 	// Fetch results.
-	resultsResp, err := b.client.results(ctx, jobID)
+	resultsResp, err := b.client.results(ctx, b.processor, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("rigetti: fetch results: %w", err)
 	}
 
 	// Get cached metadata.
-	var readoutMap map[string]string
+	var readoutMappings map[string]string
 	var shots int
 	if v, ok := b.jobs.Load(jobID); ok {
 		meta := v.(jobMeta)
-		readoutMap = meta.readoutMap
+		readoutMappings = meta.readoutMappings
 		shots = meta.shots
 	}
 
-	return parseResults(resultsResp, readoutMap, shots)
+	return parseResults(resultsResp, readoutMappings, shots)
 }
 
 // Cancel requests cancellation of a job.
 func (b *Backend) Cancel(ctx context.Context, jobID string) error {
-	return b.client.cancel(ctx, []string{jobID})
+	return b.client.cancel(ctx, b.processor, []string{jobID})
 }
 
 // mapQCSStatus converts QCS job status to backend.JobState.
+// QCS status values: 0=Unknown, 1=Queued, 2=Running, 3=Succeeded,
+// 4=Failed, 5=Canceled, 6=PostProcessing.
 func mapQCSStatus(s qcs.JobStatus) backend.JobState {
 	switch s {
 	case qcs.StatusQueued:
 		return backend.StateSubmitted
-	case qcs.StatusRunning:
+	case qcs.StatusRunning, qcs.StatusPostProcessing:
 		return backend.StateRunning
 	case qcs.StatusSucceeded:
 		return backend.StateCompleted
@@ -261,6 +302,7 @@ func mapQCSStatus(s qcs.JobStatus) backend.JobState {
 	case qcs.StatusCanceled:
 		return backend.StateCancelled
 	default:
+		// StatusUnknown and any future values.
 		return backend.StateSubmitted
 	}
 }
